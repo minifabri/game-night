@@ -49,9 +49,7 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
   return (
     <div className="flex min-h-dvh flex-col">
       {step === "intro" ? (
-        <div className="mx-auto w-full max-w-[340px] px-6 pt-8">
-          <HeroImage priority className="rounded-2xl" />
-        </div>
+        <HeroImage priority />
       ) : (
         <div className="flex justify-center px-6 pt-10">
           <Wordmark size="sm" />
