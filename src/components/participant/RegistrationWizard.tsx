@@ -49,7 +49,7 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
   return (
     <div className="flex min-h-dvh flex-col">
       {step === "intro" ? (
-        <div className="mx-auto w-full max-w-[280px] px-6 pt-8">
+        <div className="mx-auto w-full max-w-[340px] px-6 pt-8">
           <HeroImage priority className="rounded-2xl" />
         </div>
       ) : (
