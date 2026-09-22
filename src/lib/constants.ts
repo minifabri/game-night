@@ -10,19 +10,15 @@ export const TEAM_ORDER: TeamId[] = ["palestrati", "divanisti"];
 export const BRING_IDEAS: { food: string[]; drink: string[] } = {
   food: [
     "Hummus e verdure crude da pucciare",
-    "Chips di mais con guacamole",
+    "Chips di mais o legumi con guacamole",
     "Olive, frutta secca, taralli senza glutine",
-    "Insalata di quinoa e verdure",
+    "Insalata di quinoa e verdure, legumi",
     "Bruschette senza glutine con pomodorini",
     "Frutta fresca a fette",
+    "Frittata di ceci (farinata)",
+    "Tofu marinato a cubetti",
   ],
-  drink: [
-    "Succhi di frutta",
-    "Acqua tonica e sciroppi per spritz analcolici",
-    "Birra senza glutine",
-    "Vino",
-    "Bibite gassate",
-  ],
+  drink: ["Spritz", "Birra", "Vino", "Coca zero"],
 };
 
 export const CHALLENGES: Record<ChallengeId, Challenge> = {
