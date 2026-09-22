@@ -1,0 +1,117 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { cn } from "@/lib/cn";
+import { CHALLENGES } from "@/lib/constants";
+import type { TeamTotals } from "@/lib/types";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+
+interface ChallengeRow {
+  challengeId: keyof typeof CHALLENGES;
+  palestrati: number;
+  divanisti: number;
+}
+
+interface ScoreboardProps {
+  totals: TeamTotals;
+  byChallenge: ChallengeRow[];
+  variant?: "tv" | "phone";
+  finalTag?: string;
+}
+
+export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag }: ScoreboardProps) {
+  const isTv = variant === "tv";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -16 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className={cn("mx-auto w-full", isTv ? "max-w-6xl px-10 py-8" : "max-w-md px-5 py-6")}
+    >
+      {finalTag && (
+        <p className="mb-4 text-center font-sans text-xs uppercase tracking-[0.5em] text-gold-400">
+          {finalTag}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 items-end gap-4">
+        <TeamTotal label="Palestrati" value={totals.palestrati} color="gym" isTv={isTv} align="start" />
+        <TeamTotal label="Divanisti" value={totals.divanisti} color="couch" isTv={isTv} align="end" />
+      </div>
+
+      <div
+        className={cn(
+          "relative mx-auto my-4 h-px w-full bg-gradient-to-r from-transparent via-gold-400/50 to-transparent",
+          isTv && "my-6"
+        )}
+      />
+
+      <div className={cn("space-y-1.5", isTv && "space-y-2")}>
+        {byChallenge.map((row) => (
+          <div
+            key={row.challengeId}
+            className={cn(
+              "grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl px-3 py-2",
+              "bg-plum-900/40",
+              isTv && "px-5 py-3"
+            )}
+          >
+            <AnimatedNumber
+              value={row.palestrati}
+              className={cn("justify-self-end font-numeric text-gym-soft", isTv ? "text-3xl" : "text-lg")}
+            />
+            <p
+              className={cn(
+                "text-center font-sans uppercase tracking-[0.15em] text-ink-dim",
+                isTv ? "text-sm" : "text-[0.65rem]"
+              )}
+            >
+              {CHALLENGES[row.challengeId].name}
+            </p>
+            <AnimatedNumber
+              value={row.divanisti}
+              className={cn("justify-self-start font-numeric text-couch-soft", isTv ? "text-3xl" : "text-lg")}
+            />
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function TeamTotal({
+  label,
+  value,
+  color,
+  isTv,
+  align,
+}: {
+  label: string;
+  value: number;
+  color: "gym" | "couch";
+  isTv: boolean;
+  align: "start" | "end";
+}) {
+  return (
+    <div className={cn("flex flex-col", align === "start" ? "items-start" : "items-end")}>
+      <p
+        className={cn(
+          "font-display font-medium tracking-wide",
+          color === "gym" ? "text-gym" : "text-couch",
+          isTv ? "text-2xl sm:text-3xl" : "text-base"
+        )}
+      >
+        {label}
+      </p>
+      <AnimatedNumber
+        value={value}
+        className={cn(
+          "font-numeric leading-none text-cream",
+          isTv ? "text-[7rem] sm:text-[9rem]" : "text-6xl"
+        )}
+      />
+    </div>
+  );
+}

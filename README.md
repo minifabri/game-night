@@ -1,0 +1,148 @@
+# Palestrati vs Divanisti — Game Night
+
+Web app per una serata a squadre: registrazione partecipanti da telefono, scoreboard live pensata per la TV, e un pannello admin per condurre la serata (punteggi, timer, estrazioni, reveal finale).
+
+Tre esperienze, tre route:
+
+- **`/`** — partecipante: wizard di registrazione guidato, poi scoreboard live sullo stesso telefono.
+- **`/display`** — scoreboard pubblica, pensata per essere proiettata su una TV (16:9, landscape).
+- **`/admin`** — regia della serata, protetta da password condivisa.
+
+## Architettura
+
+- **Next.js 15 (App Router) + TypeScript + Tailwind v4** per UI e routing.
+- **Supabase (Postgres + Realtime)** come unico backend: niente server custom, niente WebSocket da gestire a mano.
+- **Server Actions** (`src/lib/actions/*.ts`) per ogni scrittura: usano un client Supabase server-only con la `service_role` key, che bypassa la Row Level Security. Il browser usa invece la `anon` key, che ha accesso in **sola lettura** (vedi sotto).
+- **Realtime**: ogni schermata (partecipante, display, admin) apre una subscription Postgres Changes su `game_state`, `participants`, `scores`. Qualsiasi scrittura fatta dall'admin arriva a tutti i client connessi senza refresh.
+- **Stato derivato dal tempo, non da timer lato server**: countdown, timer, estrazione e reveal finale salvano solo timestamp assoluti (es. `timer_ends_at`). Ogni client calcola in autonomia "quanto manca" a partire da quei timestamp, quindi restano sincronizzati anche tra dispositivi diversi e sopravvivono a un refresh. La TV (`/display`) è l'unico client "canonico": è lei a richiamare le server action che chiudono una sequenza transitoria (timer scaduto, estrazione mostrata abbastanza, reveal finale concluso) e a far tornare tutti sulla scoreboard — quelle action riverificano comunque i timestamp lato server, quindi nessun client può forzare una chiusura anticipata.
+- **Autenticazione admin "semplice"**: una password condivisa (`ADMIN_PASSWORD`) protegge `/admin`. Il login imposta un cookie `httpOnly` con l'hash della password; niente tabella utenti, niente Supabase Auth — volutamente minimale per una serata privata.
+- **Animazioni**: Framer Motion per transizioni tra step, cambio punteggi, countdown, sorteggio e reveal finale.
+
+### Perché niente totale salvato
+
+Il punteggio totale di ogni squadra non è mai salvato: è sempre `SUM(points)` calcolato al volo dalla tabella `scores`. Meno stato da tenere sincronizzato, zero rischio che il totale diverga dalle singole prove.
+
+## Schema database
+
+```
+teams          (id, name, sort_order)                     — 'palestrati' | 'divanisti', seed fisso
+challenges     (id, name, sort_order)                      — le 5 prove, seed fisso
+participants   (id, name, team_id, brings_food, brings_drink, created_at)
+scores         (challenge_id, team_id, points, updated_at) — PK composita, una riga per prova×squadra
+game_state     (id=1, status, campi timer_*, draw_*, final_*, updated_at) — riga singola (singleton)
+```
+
+`game_state` è una riga sola e guida l'intera esperienza pubblica tramite `status`:
+
+```
+REGISTRATION → GAME → TIMER → DRAW → FINAL_REVEAL → FINISHED
+                 ↑_______________|
+        (timer/estrazione tornano a GAME da soli)
+```
+
+Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi [Setup database](#setup-database).
+
+## Sicurezza / RLS
+
+Tutte le tabelle hanno **Row Level Security** attiva con una sola policy: lettura pubblica (`select using (true)`). Nessuna policy di scrittura per `anon`/`authenticated`: tutte le scritture passano dalle Server Action con la `service_role` key, che bypassa RLS. Questo significa che la `anon` key — che finisce comunque nel bundle del browser, è normale — non può mai essere usata per modificare punteggi o stato del gioco, nemmeno da chi la trova nel network tab.
+
+## Setup locale
+
+Requisiti: Node.js ≥ 22.6 (usa `--experimental-strip-types` per gli script di dev), un progetto Supabase.
+
+```bash
+npm install
+cp .env.local.example .env.local   # poi compila le variabili, vedi sotto
+npm run dev                        # http://localhost:3000
+```
+
+## Variabili d'ambiente
+
+| Variabile | Dove si trova | Note |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API | pubblica |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API | pubblica, sola lettura grazie a RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API ("service_role") | **segreta**, solo server, bypassa RLS |
+| `ADMIN_PASSWORD` | a tua scelta | password condivisa per `/admin` |
+| `NEXT_PUBLIC_DEV_MODE` | `true` in locale, assente/`false` in produzione | mostra il pulsante "Reset totale dati" nell'admin |
+
+## Setup database
+
+1. Crea un progetto Supabase (o riusa uno esistente — consigliato uno dedicato).
+2. Esegui le migration in `supabase/migrations/` in ordine, con [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started):
+   ```bash
+   supabase link --project-ref <il-tuo-project-ref>
+   supabase db push
+   ```
+   In alternativa incolla il contenuto dei tre file, in ordine, nell'SQL Editor della dashboard.
+3. In **Settings → API** copia URL, `anon` key e `service_role` key in `.env.local`.
+
+Le migration fanno anche il seed dei dati fissi (le 2 squadre, le 5 prove, i punteggi a 0) e abilitano la realtime publication sulle tabelle che devono propagare i cambiamenti.
+
+## Comandi di sviluppo
+
+```bash
+npm run dev          # server di sviluppo
+npm run lint          # ESLint
+npx tsc --noEmit      # type-check
+npm run seed          # popola partecipanti finti + punteggi casuali, utile per provare la UI
+npm run reset-data    # svuota partecipanti, azzera punteggi, stato → REGISTRATION
+```
+
+`seed`/`reset-data` sono script Node standalone (`scripts/`) che usano `SUPABASE_SERVICE_ROLE_KEY` direttamente — utili anche senza passare dall'admin.
+
+## Build
+
+```bash
+npm run build
+npm run start
+```
+
+## Deploy
+
+Pensata per **Vercel** (zero config oltre alle env var):
+
+1. Importa il repo su Vercel.
+2. Imposta le variabili d'ambiente della tabella sopra (con `NEXT_PUBLIC_DEV_MODE` assente o `false`).
+3. Deploy. `/display` va aperto sul browser della TV (o su un Chromecast/mini-PC collegato), `/admin` dal telefono di chi conduce la serata.
+
+Va bene anche qualunque altro host Node.js (Next.js standalone output), dato che l'app non usa funzionalità specifiche di Vercel a parte l'hosting stesso.
+
+## Verifica prima della serata
+
+Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (anche solo su due finestre del browser):
+
+- [ ] Registrazione: tutti gli step, nome vuoto bloccato, squadra obbligatoria, almeno una scelta tra mangiare/bere.
+- [ ] La sala d'attesa mostra i nomi giusti nella squadra giusta, contatori corretti, senza punteggi.
+- [ ] "Avvia gioco" dall'admin fa passare `/` e `/display` alla scoreboard **senza refresh**.
+- [ ] Modificare un punteggio nell'admin aggiorna `/display` in tempo reale, con l'animazione del numero.
+- [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT → ritorno automatico alla scoreboard dopo ~3s.
+- [ ] Pausa / Riprendi mantengono il tempo corretto; Stop torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
+- [ ] "Estrai concorrenti" con partecipanti in entrambe le squadre: shuffle, rallentamento, reveal, ritorno automatico.
+- [ ] "Estrai concorrenti" con una squadra vuota: errore gestito, nessun crash.
+- [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
+- [ ] Pareggio: azzera i punteggi delle due squadre e rilancia "Termina gioco" per vedere la schermata PAREGGIO dedicata.
+- [ ] `/` su viewport da telefono (verticale) e `/admin` sia da telefono che da desktop.
+- [ ] `/display` a piena larghezza in orientamento landscape (16:9), leggibile da qualche metro di distanza.
+
+> **Nota sull'ambiente in cui è stato sviluppato questo progetto**: la sandbox usata per questa build ha accesso di rete in uscita limitato a una allowlist e non può raggiungere l'host `*.supabase.co` del progetto (né via HTTPS né via WebSocket). Type-check, lint e `next build` sono stati eseguiti con successo, la UI statica è stata verificata visivamente con Playwright, e l'intera catena di scritture (registrazione, punteggi, timer con il controllo anti-anticipazione, estrazione, reveal finale, vincolo di integrità referenziale) è stata validata direttamente sul database via SQL. Non è stato però possibile eseguire un giro end-to-end nel browser con Supabase Realtime collegato: fai la checklist qui sopra come primo test reale, idealmente qualche giorno prima della serata.
+
+## Struttura del progetto
+
+```
+src/
+  app/                    # route: / (partecipante), /display, /admin
+  components/
+    brand/                # Wordmark
+    ui/                   # Button, AnimatedNumber, ConfirmDialog, StatusScreen
+    participant/steps/    # i 4 step della registrazione
+    stage/                # GameStage + tutte le scene pubbliche (Scoreboard, Timer, Draw, FinalReveal…)
+    admin/                # pannelli del pannello di regia
+  hooks/                  # useGameState / useParticipants / useScores (realtime) + useTick
+  lib/
+    actions/              # Server Actions (participant.ts, admin.ts)
+    supabase/              # client browser (anon) e admin (service role)
+    auth.ts, constants.ts, types.ts, format.ts, cn.ts
+scripts/                  # seed.ts, reset.ts (CLI, service role key)
+supabase/migrations/      # schema, RLS, realtime publication
+```
