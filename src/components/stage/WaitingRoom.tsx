@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { TEAM_ORDER, TEAMS } from "@/lib/constants";
 import type { Participant, TeamId } from "@/lib/types";
-import { Wordmark } from "@/components/brand/Wordmark";
+import { HeroImage } from "@/components/brand/HeroImage";
 
 interface WaitingRoomProps {
   participants: Participant[];
@@ -22,18 +22,23 @@ export function WaitingRoom({ participants, variant = "phone" }: WaitingRoomProp
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className={cn("mx-auto flex w-full flex-col", isTv ? "max-w-5xl gap-10 px-10 py-10" : "max-w-md gap-6 px-5 py-6")}
+      className="mx-auto flex w-full flex-col"
     >
       {isTv && (
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Wordmark size="lg" />
-          <p className="font-sans text-sm uppercase tracking-[0.4em] text-ink-dim">
+        <div className="mx-auto w-full max-w-3xl">
+          <HeroImage priority />
+          <p className="-mt-4 pb-2 text-center font-sans text-sm uppercase tracking-[0.4em] text-ink-dim">
             In attesa che la sfida cominci
           </p>
         </div>
       )}
 
-      <div className={cn("grid grid-cols-2", isTv ? "gap-10" : "gap-4")}>
+      <div
+        className={cn(
+          "mx-auto grid w-full grid-cols-2",
+          isTv ? "max-w-5xl gap-10 px-10 pb-10" : "max-w-md gap-4 px-5 py-6"
+        )}
+      >
         {TEAM_ORDER.map((teamId) => (
           <TeamColumn key={teamId} teamId={teamId} people={byTeam[teamId]} isTv={isTv} />
         ))}

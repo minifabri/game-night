@@ -7,6 +7,24 @@ export const TEAMS: Record<TeamId, Team> = {
 
 export const TEAM_ORDER: TeamId[] = ["palestrati", "divanisti"];
 
+export const BRING_IDEAS: { food: string[]; drink: string[] } = {
+  food: [
+    "Hummus e verdure crude da pucciare",
+    "Chips di mais con guacamole",
+    "Olive, frutta secca, taralli senza glutine",
+    "Insalata di quinoa e verdure",
+    "Bruschette senza glutine con pomodorini",
+    "Frutta fresca a fette",
+  ],
+  drink: [
+    "Succhi di frutta",
+    "Acqua tonica e sciroppi per spritz analcolici",
+    "Birra senza glutine",
+    "Vino",
+    "Bibite gassate",
+  ],
+};
+
 export const CHALLENGES: Record<ChallengeId, Challenge> = {
   quiz: { id: "quiz", name: "Quiz culturale", sort_order: 0 },
   creativity: { id: "creativity", name: "Prova di creatività", sort_order: 1 },

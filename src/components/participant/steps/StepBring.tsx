@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
+import { BRING_IDEAS } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 interface StepBringProps {
   onSubmit: (choice: { bringsFood: boolean; bringsDrink: boolean }) => void;
@@ -14,6 +16,7 @@ interface StepBringProps {
 export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
   const [food, setFood] = useState(false);
   const [drink, setDrink] = useState(false);
+  const [ideasOpen, setIdeasOpen] = useState(false);
   const canSubmit = (food || drink) && !submitting;
 
   return (
@@ -32,6 +35,22 @@ export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
         <Choice label="Da bere" checked={drink} onToggle={() => setDrink((v) => !v)} delay={0.18} />
       </div>
 
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.26, duration: 0.5 }}
+        className="flex flex-col items-center gap-1.5"
+      >
+        <p className="font-sans text-xs italic text-ink-dim">Vegano e senza glutine, please.</p>
+        <button
+          type="button"
+          onClick={() => setIdeasOpen(true)}
+          className="font-sans text-xs uppercase tracking-[0.2em] text-gold-400 underline underline-offset-4 hover:text-gold-300"
+        >
+          Ti serve un&apos;idea?
+        </button>
+      </motion.div>
+
       {error && <p className="font-sans text-sm text-gym">{error}</p>}
 
       <motion.div animate={{ opacity: canSubmit ? 1 : 0.3 }} transition={{ duration: 0.3 }}>
@@ -39,6 +58,32 @@ export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
           {submitting ? "Un attimo…" : "Sono pronto"}
         </Button>
       </motion.div>
+
+      <Modal open={ideasOpen} title="Qualche idea" onClose={() => setIdeasOpen(false)}>
+        <p className="-mt-2 font-sans text-xs italic text-ink-dim">
+          Tutto vegano e senza glutine, ovviamente.
+        </p>
+        <IdeaList label="Da mangiare" items={BRING_IDEAS.food} />
+        <IdeaList label="Da bere" items={BRING_IDEAS.drink} />
+        <Button variant="ghost" size="md" onClick={() => setIdeasOpen(false)} className="mt-1 self-center">
+          Ho capito
+        </Button>
+      </Modal>
+    </div>
+  );
+}
+
+function IdeaList({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div className="flex flex-col gap-2 text-left">
+      <p className="font-sans text-xs font-medium uppercase tracking-[0.2em] text-gold-400">{label}</p>
+      <ul className="flex flex-col gap-1.5">
+        {items.map((item) => (
+          <li key={item} className="font-sans text-sm text-ink">
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

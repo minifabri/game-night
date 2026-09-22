@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Wordmark } from "@/components/brand/Wordmark";
+import { HeroImage } from "@/components/brand/HeroImage";
 import { StepIntro } from "@/components/participant/steps/StepIntro";
 import { StepName } from "@/components/participant/steps/StepName";
 import { StepTeam } from "@/components/participant/steps/StepTeam";
@@ -46,54 +47,62 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
   const stepIndex = STEP_ORDER.indexOf(step);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-between px-6 py-10">
-      <Wordmark size="sm" />
+    <div className="flex min-h-dvh flex-col">
+      {step === "intro" ? (
+        <HeroImage priority />
+      ) : (
+        <div className="flex justify-center px-6 pt-10">
+          <Wordmark size="sm" />
+        </div>
+      )}
 
-      <div className="flex w-full flex-1 items-center justify-center py-10">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -24 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex w-full justify-center"
-          >
-            {step === "intro" && <StepIntro onNext={() => setStep("name")} />}
-            {step === "name" && (
-              <StepName
-                initialValue={name}
-                onNext={(value) => {
-                  setName(value);
-                  setStep("team");
-                }}
-              />
-            )}
-            {step === "team" && (
-              <StepTeam
-                onNext={(value) => {
-                  setTeam(value);
-                  setStep("bring");
-                }}
-              />
-            )}
-            {step === "bring" && (
-              <StepBring onSubmit={handleBringSubmit} submitting={submitting} error={error} />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <div className="flex w-full flex-1 flex-col items-center justify-between px-6 pb-10">
+        <div className="flex w-full flex-1 items-center justify-center py-10">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="flex w-full justify-center"
+            >
+              {step === "intro" && <StepIntro onNext={() => setStep("name")} />}
+              {step === "name" && (
+                <StepName
+                  initialValue={name}
+                  onNext={(value) => {
+                    setName(value);
+                    setStep("team");
+                  }}
+                />
+              )}
+              {step === "team" && (
+                <StepTeam
+                  onNext={(value) => {
+                    setTeam(value);
+                    setStep("bring");
+                  }}
+                />
+              )}
+              {step === "bring" && (
+                <StepBring onSubmit={handleBringSubmit} submitting={submitting} error={error} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-      <div className="flex gap-2">
-        {STEP_ORDER.map((s, i) => (
-          <span
-            key={s}
-            className={cn(
-              "h-1.5 w-1.5 rounded-full transition-colors",
-              i <= stepIndex ? "bg-gold-400" : "bg-ink-dim/20"
-            )}
-          />
-        ))}
+        <div className="flex gap-2">
+          {STEP_ORDER.map((s, i) => (
+            <span
+              key={s}
+              className={cn(
+                "h-1.5 w-1.5 rounded-full transition-colors",
+                i <= stepIndex ? "bg-gold-400" : "bg-ink-dim/20"
+              )}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
