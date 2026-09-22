@@ -5,6 +5,7 @@ import { CHALLENGE_ORDER, CHALLENGES } from "@/lib/constants";
 import type { ChallengeId, TeamId } from "@/lib/types";
 import { setScore } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
+import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 import { cn } from "@/lib/cn";
 
 interface ScoreEditorProps {
@@ -19,7 +20,13 @@ export function ScoreEditor({ byChallenge }: ScoreEditorProps) {
           const row = byChallenge.find((r) => r.challengeId === challengeId);
           return (
             <div key={challengeId}>
-              <p className="mb-2 font-sans text-sm text-ink-dim">{CHALLENGES[challengeId].name}</p>
+              <p className="mb-2 flex items-center gap-2 font-sans text-sm text-ink-dim">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold-400/40 font-numeric text-xs text-gold-300">
+                  {CHALLENGES[challengeId].sort_order + 1}
+                </span>
+                <ChallengeIcon id={challengeId} className="h-4 w-4 shrink-0 text-gold-400/80" />
+                {CHALLENGES[challengeId].name}
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <ScoreCell challengeId={challengeId} teamId="palestrati" points={row?.palestrati ?? 0} />
                 <ScoreCell challengeId={challengeId} teamId="divanisti" points={row?.divanisti ?? 0} />

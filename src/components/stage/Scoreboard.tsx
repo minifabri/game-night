@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { CHALLENGES } from "@/lib/constants";
 import type { TeamTotals } from "@/lib/types";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 
 interface ChallengeRow {
   challengeId: keyof typeof CHALLENGES;
@@ -62,14 +63,28 @@ export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag }:
               value={row.palestrati}
               className={cn("justify-self-end font-numeric text-gym-soft", isTv ? "text-3xl" : "text-lg")}
             />
-            <p
-              className={cn(
-                "text-center font-sans uppercase tracking-[0.15em] text-ink-dim",
-                isTv ? "text-sm" : "text-[0.65rem]"
-              )}
-            >
-              {CHALLENGES[row.challengeId].name}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <span
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-full border border-gold-400/40 font-numeric text-gold-300",
+                  isTv ? "h-7 w-7 text-base" : "h-4 w-4 text-[0.6rem]"
+                )}
+              >
+                {CHALLENGES[row.challengeId].sort_order + 1}
+              </span>
+              <ChallengeIcon
+                id={row.challengeId}
+                className={cn("shrink-0 text-gold-400/80", isTv ? "h-6 w-6" : "h-3.5 w-3.5")}
+              />
+              <p
+                className={cn(
+                  "text-center font-sans uppercase tracking-[0.15em] text-ink-dim",
+                  isTv ? "text-sm" : "text-[0.65rem]"
+                )}
+              >
+                {CHALLENGES[row.challengeId].name}
+              </p>
+            </div>
             <AnimatedNumber
               value={row.divanisti}
               className={cn("justify-self-start font-numeric text-couch-soft", isTv ? "text-3xl" : "text-lg")}
