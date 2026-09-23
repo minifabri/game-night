@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useScores } from "@/hooks/useScores";
+import { useAudioState } from "@/hooks/useAudioState";
+import { useSounds } from "@/hooks/useSounds";
 import { StatusScreen } from "@/components/ui/StatusScreen";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { GameLifecyclePanel } from "@/components/admin/GameLifecyclePanel";
@@ -12,6 +14,7 @@ import { ParticipantsPanel } from "@/components/admin/ParticipantsPanel";
 import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
+import { SoundConsole } from "@/components/admin/SoundConsole";
 import { DevResetPanel } from "@/components/admin/DevResetPanel";
 import { logoutAdmin } from "@/lib/actions/admin";
 
@@ -20,7 +23,9 @@ const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 export function AdminDashboard() {
   const { gameState, loading: gsLoading, error: gsError } = useGameState();
   const { participants, loading: pLoading } = useParticipants();
-  const { byChallenge, loading: sLoading } = useScores();
+  const { totals, byChallenge, loading: sLoading } = useScores();
+  const { audioState, error: audioError } = useAudioState();
+  const { sounds } = useSounds();
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -49,6 +54,13 @@ export function AdminDashboard() {
       <ScoreEditor byChallenge={byChallenge} />
       <TimerControls gameState={gameState} />
       <DrawControl gameState={gameState} />
+      <SoundConsole
+        gameState={gameState}
+        totals={totals}
+        audioState={audioState}
+        audioError={audioError}
+        sounds={sounds}
+      />
       {DEV_MODE && <DevResetPanel />}
     </div>
   );

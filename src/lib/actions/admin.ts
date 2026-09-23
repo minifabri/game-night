@@ -62,6 +62,103 @@ export async function startGame(): Promise<ActionResult> {
   return { ok: true };
 }
 
+// ---------------------------------------------------------------------------
+// Pause
+// ---------------------------------------------------------------------------
+
+const pauseSchema = z.object({ message: z.string().trim().max(80).optional() });
+
+/**
+ * Puts every screen on the "gioco in pausa" card. Allowed from the scoreboard
+ * or a timer; a running timer is frozen (same maths as pauseTimer) and
+ * restarted automatically on resume.
+ */
+export async function pauseGame(input: { message?: string } = {}): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = pauseSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Messaggio troppo lungo (max 80 caratteri)." };
+
+  const supabase = getSupabaseAdminClient();
+  const { data: state } = await supabase
+    .from("game_state")
+    .select("status, timer_phase, timer_ends_at, timer_countdown_ends_at")
+    .eq("id", 1)
+    .single();
+
+  if (!state || (state.status !== "GAME" && state.status !== "TIMER")) {
+    return { ok: false, error: "Si può mettere in pausa solo dalla scoreboard o durante un timer." };
+  }
+
+  const patch: Record<string, unknown> = {
+    status: "PAUSED",
+    pause_previous_status: state.status,
+    pause_message: parsed.data.message || null,
+    pause_resumes_timer: false,
+  };
+
+  if (state.status === "TIMER" && state.timer_phase === "active") {
+    const now = Date.now();
+    const countdownEndsAt = state.timer_countdown_ends_at
+      ? new Date(state.timer_countdown_ends_at).getTime()
+      : now;
+    const endsAt = state.timer_ends_at ? new Date(state.timer_ends_at).getTime() : now;
+    const remaining = now < countdownEndsAt ? endsAt - countdownEndsAt : Math.max(0, endsAt - now);
+    if (remaining <= 0) {
+      return { ok: false, error: "Il timer è già scaduto." };
+    }
+    Object.assign(patch, {
+      timer_phase: "paused",
+      timer_remaining_ms: remaining,
+      timer_ends_at: null,
+      timer_countdown_ends_at: null,
+      pause_resumes_timer: true,
+    });
+  }
+
+  const { error } = await supabase.from("game_state").update(patch).eq("id", 1).eq("status", state.status);
+  if (error) return { ok: false, error: "Impossibile mettere in pausa il gioco." };
+  return { ok: true };
+}
+
+export async function resumeGame(): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const supabase = getSupabaseAdminClient();
+  const { data: state } = await supabase
+    .from("game_state")
+    .select("status, pause_previous_status, pause_resumes_timer, timer_phase, timer_remaining_ms")
+    .eq("id", 1)
+    .single();
+
+  if (!state || state.status !== "PAUSED") {
+    return { ok: false, error: "Il gioco non è in pausa." };
+  }
+
+  const backToTimer = state.pause_previous_status === "TIMER" && state.timer_phase !== "idle";
+  const patch: Record<string, unknown> = {
+    status: backToTimer ? "TIMER" : "GAME",
+    pause_previous_status: null,
+    pause_message: null,
+    pause_resumes_timer: false,
+  };
+
+  if (backToTimer && state.pause_resumes_timer && state.timer_phase === "paused") {
+    const now = Date.now();
+    Object.assign(patch, {
+      timer_phase: "active",
+      timer_countdown_ends_at: new Date(now - 1).toISOString(),
+      timer_ends_at: new Date(now + ((state.timer_remaining_ms as number) ?? 0)).toISOString(),
+    });
+  }
+
+  const { error } = await supabase.from("game_state").update(patch).eq("id", 1).eq("status", "PAUSED");
+  if (error) return { ok: false, error: "Impossibile riprendere il gioco." };
+  return { ok: true };
+}
+
 const setScoreSchema = z.object({
   challengeId: z.enum(["quiz", "creativity", "physical", "courage", "finalissima"]),
   teamId: z.enum(["palestrati", "divanisti"]),
@@ -122,9 +219,10 @@ export async function startTimer(input: {
   const supabase = getSupabaseAdminClient();
   const { data: current } = await supabase
     .from("game_state")
-    .select("timer_nonce")
+    .select("timer_nonce, status")
     .eq("id", 1)
     .single();
+  if (current?.status === "PAUSED") return { ok: false, error: "Il gioco è in pausa." };
 
   const { error } = await supabase
     .from("game_state")
@@ -188,10 +286,11 @@ export async function resumeTimer(): Promise<ActionResult> {
   const supabase = getSupabaseAdminClient();
   const { data: state } = await supabase
     .from("game_state")
-    .select("timer_phase, timer_remaining_ms")
+    .select("status, timer_phase, timer_remaining_ms")
     .eq("id", 1)
     .single();
 
+  if (state?.status === "PAUSED") return { ok: false, error: "Prima riprendi il gioco." };
   if (!state || state.timer_phase !== "paused") {
     return { ok: false, error: "Nessun timer in pausa da riprendere." };
   }
@@ -319,9 +418,10 @@ export async function drawParticipants(): Promise<ActionResult> {
 
   const { data: current } = await supabase
     .from("game_state")
-    .select("draw_nonce")
+    .select("draw_nonce, status")
     .eq("id", 1)
     .single();
+  if (current?.status === "PAUSED") return { ok: false, error: "Il gioco è in pausa." };
 
   const { error } = await supabase
     .from("game_state")
@@ -456,6 +556,9 @@ export async function resetGameData(): Promise<ActionResult> {
       final_couch_score: null,
       final_winner_team_id: null,
       final_is_draw: false,
+      pause_previous_status: null,
+      pause_message: null,
+      pause_resumes_timer: false,
     })
     .eq("id", 1);
 

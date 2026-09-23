@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 export default function DisplayPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center overflow-hidden">
-      <GameStage variant="tv" isCanonical />
+      <GameStage variant="tv" isCanonical withAudio />
     </main>
   );
 }
