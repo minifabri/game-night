@@ -12,6 +12,7 @@ import { ParticipantsPanel } from "@/components/admin/ParticipantsPanel";
 import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
+import { ResetScoresPanel } from "@/components/admin/ResetScoresPanel";
 import { DevResetPanel } from "@/components/admin/DevResetPanel";
 import { logoutAdmin } from "@/lib/actions/admin";
 
@@ -49,6 +50,7 @@ export function AdminDashboard() {
       <ScoreEditor byChallenge={byChallenge} />
       <TimerControls gameState={gameState} />
       <DrawControl gameState={gameState} />
+      <ResetScoresPanel />
       {DEV_MODE && <DevResetPanel />}
     </div>
   );
