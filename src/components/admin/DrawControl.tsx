@@ -25,7 +25,7 @@ export function DrawControl({ gameState }: { gameState: GameState }) {
       </p>
       <Button
         size="lg"
-        disabled={pending || gameState.status === "DRAW"}
+        disabled={pending || gameState.status === "DRAW" || gameState.status === "PAUSED"}
         onClick={run}
         className="w-full"
       >

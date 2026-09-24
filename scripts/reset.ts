@@ -25,6 +25,9 @@ async function main() {
       final_couch_score: null,
       final_winner_team_id: null,
       final_is_draw: false,
+      pause_previous_status: null,
+      pause_message: null,
+      pause_resumes_timer: false,
     })
     .eq("id", 1);
   if (error) throw error;

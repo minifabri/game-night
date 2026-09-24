@@ -13,7 +13,8 @@ export type GameStatus =
   | "TIMER"
   | "DRAW"
   | "FINAL_REVEAL"
-  | "FINISHED";
+  | "FINISHED"
+  | "PAUSED";
 
 export type TimerPhase = "idle" | "active" | "paused";
 
@@ -69,10 +70,47 @@ export interface GameState {
   final_is_draw: boolean;
   final_nonce: number;
 
+  pause_previous_status: "GAME" | "TIMER" | null;
+  pause_message: string | null;
+  pause_resumes_timer: boolean;
+
   updated_at: string;
 }
 
 export interface TeamTotals {
   palestrati: number;
   divanisti: number;
+}
+
+export type SoundKind = "music" | "sfx";
+
+export interface Sound {
+  id: string;
+  name: string;
+  kind: SoundKind;
+  url: string;
+  storage_path: string | null;
+  created_at: string;
+}
+
+export type MusicStatus = "playing" | "paused" | "stopped";
+
+/** A playable effect: `builtin:<id>` for a synthesized sound, otherwise a `sounds.id`. */
+export type SoundRef = string;
+
+export interface AudioState {
+  id: 1;
+  music_sound_id: string | null;
+  music_status: MusicStatus;
+  music_loop: boolean;
+  music_nonce: number;
+  music_volume: number;
+  sfx_ref: SoundRef | null;
+  sfx_nonce: number;
+  sfx_volume: number;
+  stop_nonce: number;
+  muted: boolean;
+  auto_enabled: boolean;
+  auto_map: Record<string, SoundRef | "off">;
+  updated_at: string;
 }

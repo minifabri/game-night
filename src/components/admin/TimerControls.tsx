@@ -16,6 +16,7 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
 
   const isTimerStatus = gameState.status === "TIMER";
   const phase = gameState.timer_phase;
+  const paused = gameState.status === "PAUSED";
 
   function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -37,7 +38,7 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
           <button
             key={preset.label}
             type="button"
-            disabled={pending}
+            disabled={pending || paused}
             onClick={() => launch(preset.label, preset.ms)}
             className="rounded-xl border border-ink-dim/25 py-2 font-sans text-sm text-ink hover:border-gold-400 hover:text-gold-300 disabled:opacity-40"
           >
@@ -53,7 +54,7 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
         <Button
           size="md"
           variant="ghost"
-          disabled={pending || (customMinutes === 0 && customSeconds === 0)}
+          disabled={pending || paused || (customMinutes === 0 && customSeconds === 0)}
           onClick={() => launch("Timer", (customMinutes * 60 + customSeconds) * 1000)}
         >
           Avvia

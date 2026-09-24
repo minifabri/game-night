@@ -29,7 +29,9 @@ teams          (id, name, sort_order)                     — 'palestrati' | 'di
 challenges     (id, name, sort_order)                      — le 5 prove, seed fisso
 participants   (id, name, team_id, brings_food, brings_drink, created_at)
 scores         (challenge_id, team_id, points, updated_at) — PK composita, una riga per prova×squadra
-game_state     (id=1, status, campi timer_*, draw_*, final_*, updated_at) — riga singola (singleton)
+game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, updated_at) — riga singola (singleton)
+sounds         (id, name, kind 'music'|'sfx', url, storage_path, created_at) — libreria della console audio
+audio_state    (id=1, music_*, sfx_*, stop_nonce, muted, auto_enabled, auto_map) — comandi audio (singleton)
 ```
 
 `game_state` è una riga sola e guida l'intera esperienza pubblica tramite `status`:
@@ -38,6 +40,8 @@ game_state     (id=1, status, campi timer_*, draw_*, final_*, updated_at) — ri
 REGISTRATION → GAME → TIMER → DRAW → FINAL_REVEAL → FINISHED
                  ↑_______________|
         (timer/estrazione tornano a GAME da soli)
+
+GAME / TIMER ⇄ PAUSED   (pausa manuale dall'admin; un timer in corso viene congelato e riparte alla ripresa)
 ```
 
 Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi [Setup database](#setup-database).
@@ -45,6 +49,20 @@ Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi
 ## Sicurezza / RLS
 
 Tutte le tabelle hanno **Row Level Security** attiva con una sola policy: lettura pubblica (`select using (true)`). Nessuna policy di scrittura per `anon`/`authenticated`: tutte le scritture passano dalle Server Action con la `service_role` key, che bypassa RLS. Questo significa che la `anon` key — che finisce comunque nel bundle del browser, è normale — non può mai essere usata per modificare punteggi o stato del gioco, nemmeno da chi la trova nel network tab.
+
+## Console audio
+
+L'audio esce **solo dalla TV** (`/display`): i telefoni dei partecipanti restano muti. L'admin comanda tutto dal pannello "Console audio":
+
+- **Colonna sonora**: tracce in loop con play/pausa/stop, volume dedicato. La musica si abbassa da sola (ducking) quando parte un effetto.
+- **Pad effetti**: un tap e l'effetto parte sulla TV (oppure "Anteprima qui" per sentirlo solo sul telefono dell'admin). "Stop tutto" e "Muto" per le emergenze.
+- **Effetti automatici** sulle azioni di gioco: avvio gioco, countdown 3-2-1, partenza timer, ultimi 5 secondi, time out, estrazione (shuffle + reveal), assegnazione punti, suspense finale, vincita/pareggio, pausa/ripresa. Di default usano effetti **sintetizzati con la Web Audio API** (nessun file necessario); ogni evento si può riassegnare a un suono della libreria o disattivare.
+- **Libreria**: upload di file audio (bucket Supabase Storage `sounds`, pubblico, max 50 MB, caricati dal browser con un signed upload URL generato da una server action admin) oppure link diretto a un mp3.
+- **Catalogo Ciao Darwin**: la lista dei suoni del programma da procurarsi (sigla "Matti", Adiemus/Madre Natura, Genodrome, cilindroni, Laurenti…), con link di ricerca e un pulsante per assegnarli all'evento automatico adatto. I clip già raccolti per la serata sono in `public/sounds/ciao-darwin/` e registrati nella tabella `sounds` con URL relativi (es. `/sounds/ciao-darwin/no-no-no.mp3`), quindi vengono serviti dal deploy stesso; gli altri si caricano dalla console. Sono clip protetti da copyright, tenuti qui solo per uso privato alla festa.
+
+Come per il resto, lo stato vive in una riga singleton (`audio_state`) scritta solo dalle server action e propagata via Realtime; la TV la traduce in suono. Gli effetti automatici sono ricavati dagli stessi timestamp delle scene, quindi partono in sincrono con quello che si vede — e non partono per uno stato già in corso quando la pagina viene caricata.
+
+> **Autoplay**: i browser bloccano l'audio finché non c'è un'interazione. Sulla TV compare "Tocca per attivare l'audio": basta un click/tap (o un tasto del telecomando) una volta dopo aver aperto `/display`.
 
 ## Setup locale
 
@@ -74,7 +92,7 @@ npm run dev                        # http://localhost:3000
    supabase link --project-ref <il-tuo-project-ref>
    supabase db push
    ```
-   In alternativa incolla il contenuto dei tre file, in ordine, nell'SQL Editor della dashboard.
+   In alternativa incolla il contenuto dei file, in ordine, nell'SQL Editor della dashboard.
 3. In **Settings → API** copia URL, `anon` key e `service_role` key in `.env.local`.
 
 Le migration fanno anche il seed dei dati fissi (le 2 squadre, le 5 prove, i punteggi a 0) e abilitano la realtime publication sulle tabelle che devono propagare i cambiamenti.
@@ -122,6 +140,9 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] "Estrai concorrenti" con una squadra vuota: errore gestito, nessun crash.
 - [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
 - [ ] Pareggio: azzera i punteggi delle due squadre e rilancia "Termina gioco" per vedere la schermata PAREGGIO dedicata.
+- [ ] "Metti in pausa" (con e senza messaggio) dalla scoreboard e durante un timer: tutti gli schermi mostrano PAUSA; "Riprendi il gioco" torna dove si era e il timer riparte dal tempo rimasto.
+- [ ] Audio: su `/display` tocca "Attiva l'audio", poi prova pad, musica (play/pausa/stop/loop/volume) e "Stop tutto" dalla console.
+- [ ] Effetti automatici su countdown, ultimi 5 secondi, time out, estrazione, punti, finale e pausa; riassegna un evento a un suono caricato e verifica che cambi.
 - [ ] `/` su viewport da telefono (verticale) e `/admin` sia da telefono che da desktop.
 - [ ] `/display` a piena larghezza in orientamento landscape (16:9), leggibile da qualche metro di distanza.
 
@@ -138,11 +159,13 @@ src/
     participant/steps/    # i 4 step della registrazione
     stage/                # GameStage + tutte le scene pubbliche (Scoreboard, Timer, Draw, FinalReveal…)
     admin/                # pannelli del pannello di regia
-  hooks/                  # useGameState / useParticipants / useScores (realtime) + useTick
+    audio/                # AudioDirector (riproduzione + effetti automatici), StageAudio
+  hooks/                  # useGameState / useParticipants / useScores / useAudioState / useSounds (realtime) + useTick
   lib/
-    actions/              # Server Actions (participant.ts, admin.ts)
+    actions/              # Server Actions (participant.ts, admin.ts, audio.ts)
+    audio/                # catalogo suoni/eventi, sintetizzatore Web Audio, engine di riproduzione
     supabase/              # client browser (anon) e admin (service role)
     auth.ts, constants.ts, types.ts, format.ts, cn.ts
 scripts/                  # seed.ts, reset.ts (CLI, service role key)
-supabase/migrations/      # schema, RLS, realtime publication
+supabase/migrations/      # schema, RLS, realtime publication, pausa, audio
 ```

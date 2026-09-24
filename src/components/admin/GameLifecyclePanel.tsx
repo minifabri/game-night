@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { startGame, finishGame } from "@/lib/actions/admin";
+import { startGame, finishGame, pauseGame, resumeGame } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -14,12 +14,14 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   DRAW: "In corso — estrazione",
   FINAL_REVEAL: "In corso — reveal finale",
   FINISHED: "Terminato",
+  PAUSED: "In pausa",
 };
 
 export function GameLifecyclePanel({ gameState }: { gameState: GameState }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pauseMessage, setPauseMessage] = useState("");
 
   function runStart() {
     setError(null);
@@ -38,6 +40,25 @@ export function GameLifecyclePanel({ gameState }: { gameState: GameState }) {
     });
   }
 
+  function runPause() {
+    setError(null);
+    startTransition(async () => {
+      const result = await pauseGame({ message: pauseMessage });
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  function runResume() {
+    setError(null);
+    startTransition(async () => {
+      const result = await resumeGame();
+      if (!result.ok) setError(result.error);
+      else setPauseMessage("");
+    });
+  }
+
+  const isPaused = gameState.status === "PAUSED";
+  const canPause = gameState.status === "GAME" || gameState.status === "TIMER";
   const canStart = gameState.status === "REGISTRATION";
   const canFinish = gameState.status !== "REGISTRATION" && gameState.status !== "FINISHED";
 
@@ -49,6 +70,30 @@ export function GameLifecyclePanel({ gameState }: { gameState: GameState }) {
         <Button size="lg" disabled={pending || !canStart} onClick={runStart}>
           Avvia gioco
         </Button>
+        {isPaused ? (
+          <Button size="lg" onClick={runResume} disabled={pending}>
+            Riprendi il gioco
+          </Button>
+        ) : (
+          <div className="flex flex-col gap-2 rounded-2xl border border-ink-dim/15 p-3">
+            <input
+              type="text"
+              value={pauseMessage}
+              maxLength={80}
+              onChange={(e) => setPauseMessage(e.target.value)}
+              placeholder="Messaggio sullo schermo (opzionale) — es. Pausa cibo!"
+              className="rounded-xl border border-ink-dim/25 bg-transparent px-3 py-2 font-sans text-sm text-cream outline-none placeholder:text-ink-dim/60 focus:border-gold-400"
+            />
+            <Button size="md" variant="ghost" disabled={pending || !canPause} onClick={runPause}>
+              Metti in pausa
+            </Button>
+          </div>
+        )}
+        {isPaused && gameState.pause_message && (
+          <p className="text-center font-sans text-xs text-ink-dim">
+            Sullo schermo: “{gameState.pause_message}”
+          </p>
+        )}
         <Button
           size="lg"
           variant="danger"
