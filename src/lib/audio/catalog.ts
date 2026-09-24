@@ -85,6 +85,45 @@ export const CIAO_DARWIN_PACK: {
   suggestedFor?: AutoEventId;
 }[] = [
   {
+    name: "Scelta concorrenti",
+    kind: "sfx",
+    hint: "La musica della scelta dei concorrenti: parte con lo shuffle dell'estrazione e si taglia al reveal.",
+    query: "ciao darwin scelta concorrenti",
+    suggestedFor: "draw_shuffle",
+  },
+  {
+    name: "NO NO NO",
+    kind: "sfx",
+    hint: "Perfetto quando scade il tempo, e dal pad per una risposta sbagliata.",
+    query: "ciao darwin no no no",
+    suggestedFor: "timeout",
+  },
+  {
+    name: "Un attimo",
+    kind: "sfx",
+    hint: "Parte quando metti il gioco in pausa.",
+    query: "ciao darwin un attimo",
+    suggestedFor: "pause",
+  },
+  {
+    name: "Ma che cazz' di problemi ha lei",
+    kind: "sfx",
+    hint: "Da pad, a piacere.",
+    query: "ma che cazz di problemi ha lei",
+  },
+  {
+    name: "Che cazzo sta a fa'",
+    kind: "sfx",
+    hint: "Da pad, a piacere.",
+    query: "che cazzo sta a fa",
+  },
+  {
+    name: "Qualcosa pure a me",
+    kind: "sfx",
+    hint: "Da pad: quando una squadra resta a secco di punti.",
+    query: "qualcosa pure a me",
+  },
+  {
     name: "Matti — sigla (Renato Zero)",
     kind: "music",
     hint: "La sigla storica del programma: perfetta per l'apertura e le pause.",
@@ -92,7 +131,7 @@ export const CIAO_DARWIN_PACK: {
   },
   {
     name: "Adiemus — Madre Natura",
-    kind: "music",
+    kind: "sfx",
     hint: "L'ingresso di Madre Natura (Karl Jenkins): da usare per la vincita.",
     query: "adiemus ciao darwin",
     suggestedFor: "winner",
