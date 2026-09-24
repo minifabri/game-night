@@ -524,6 +524,50 @@ export async function settleFinalReveal(): Promise<ActionResult> {
   return { ok: true };
 }
 
+/**
+ * Zeroes every score and rewinds the game phase (timer/draw/final fields) so
+ * a new simulation can start, without touching `participants` — registered
+ * players and teams are left exactly as they are.
+ */
+export async function resetScoresKeepParticipants(): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const supabase = getSupabaseAdminClient();
+  const { error: scoresError } = await supabase
+    .from("scores")
+    .update({ points: 0 })
+    .in("team_id", TEAM_ORDER);
+  if (scoresError) return { ok: false, error: "Impossibile azzerare i punteggi." };
+
+  const { error } = await supabase
+    .from("game_state")
+    .update({
+      status: "GAME",
+      timer_label: null,
+      timer_duration_ms: null,
+      timer_phase: "idle",
+      timer_countdown_ends_at: null,
+      timer_ends_at: null,
+      timer_remaining_ms: null,
+      draw_gym_participant_id: null,
+      draw_couch_participant_id: null,
+      draw_started_at: null,
+      final_started_at: null,
+      final_gym_score: null,
+      final_couch_score: null,
+      final_winner_team_id: null,
+      final_is_draw: false,
+      pause_previous_status: null,
+      pause_message: null,
+      pause_resumes_timer: false,
+    })
+    .eq("id", 1);
+
+  if (error) return { ok: false, error: "Reset punteggi non riuscito." };
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Dev-only reset
 // ---------------------------------------------------------------------------

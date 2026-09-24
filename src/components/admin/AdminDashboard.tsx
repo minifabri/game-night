@@ -15,6 +15,7 @@ import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
 import { SoundConsole } from "@/components/admin/SoundConsole";
+import { ResetScoresPanel } from "@/components/admin/ResetScoresPanel";
 import { DevResetPanel } from "@/components/admin/DevResetPanel";
 import { logoutAdmin } from "@/lib/actions/admin";
 
@@ -61,6 +62,7 @@ export function AdminDashboard() {
         audioError={audioError}
         sounds={sounds}
       />
+      <ResetScoresPanel />
       {DEV_MODE && <DevResetPanel />}
     </div>
   );
