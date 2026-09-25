@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions/audio";
 import { AUTO_EVENTS, BUILTIN_SOUNDS, builtinRef, parseBuiltin } from "@/lib/audio/catalog";
 import { getAudioEngine } from "@/lib/audio/engine";
+import { isSpotifyUrl } from "@/lib/audio/spotify";
 import { Panel } from "@/components/admin/Panel";
 import { Button } from "@/components/ui/Button";
 import { AudioDirector } from "@/components/audio/AudioDirector";
@@ -79,6 +80,9 @@ export function SoundConsole({ gameState, totals, audioState, audioError, sounds
   const music = sounds.filter((s) => s.kind === "music");
   const libraryEffects = sounds.filter((s) => s.kind === "sfx");
   const currentTrack = sounds.find((s) => s.id === audioState.music_sound_id) ?? null;
+  const currentIsSpotify = currentTrack ? isSpotifyUrl(currentTrack.url) : false;
+  // Spotify links only play as soundtrack, never as an effect
+  const effectSounds = sounds.filter((s) => !isSpotifyUrl(s.url));
 
   function playPad(ref: SoundRef) {
     if (padTarget === "local") {
@@ -155,13 +159,25 @@ export function SoundConsole({ gameState, totals, audioState, audioError, sounds
           >
             Stop
           </SmallButton>
-          <SmallButton active={audioState.music_loop} onClick={() => run(() => setMusicLoop(!audioState.music_loop))}>
+          <SmallButton
+            active={audioState.music_loop}
+            disabled={currentIsSpotify}
+            onClick={() => run(() => setMusicLoop(!audioState.music_loop))}
+          >
             Loop {audioState.music_loop ? "on" : "off"}
           </SmallButton>
         </div>
+        {currentIsSpotify && (
+          <p className="mt-2 font-sans text-xs text-ink-dim">
+            Spotify: la playlist va avanti da sola e il volume si regola sulla TV (il cursore qui non lo cambia);
+            &quot;Muto&quot; la mette in pausa.
+          </p>
+        )}
       </div>
       {music.length === 0 ? (
-        <p className="mb-6 font-sans text-xs text-ink-dim">Carica una traccia dalla libreria qui sotto.</p>
+        <p className="mb-6 font-sans text-xs text-ink-dim">
+          Carica una traccia o incolla una playlist Spotify dalla libreria qui sotto.
+        </p>
       ) : (
         <ul className="mb-6 flex flex-col gap-1.5">
           {music.map((track) => {
@@ -179,6 +195,9 @@ export function SoundConsole({ gameState, totals, audioState, audioError, sounds
                 >
                   <PlayIcon />
                   <span className="truncate">{track.name}</span>
+                  {isSpotifyUrl(track.url) && (
+                    <span className="ml-auto shrink-0 text-[0.6rem] uppercase tracking-[0.2em] text-couch">Spotify</span>
+                  )}
                 </button>
               </li>
             );
@@ -244,9 +263,9 @@ export function SoundConsole({ gameState, totals, audioState, audioError, sounds
                 className="w-full rounded-lg border border-ink-dim/25 bg-plum-900 px-2 py-1.5 text-sm text-cream outline-none focus:border-gold-400"
               >
                 <option value="">Predefinito · {defaultLabel}</option>
-                {sounds.length > 0 && (
+                {effectSounds.length > 0 && (
                   <optgroup label="Libreria">
-                    {sounds.map((s) => (
+                    {effectSounds.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>

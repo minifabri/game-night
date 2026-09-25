@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useTick, msUntil } from "@/hooks/useTick";
 import { getAudioEngine } from "@/lib/audio/engine";
 import { parseBuiltin, resolveAutoRef, type AutoEventId } from "@/lib/audio/catalog";
+import { parseSpotify, spotifyUri } from "@/lib/audio/spotify";
+import { SpotifyPlayer } from "@/components/audio/SpotifyPlayer";
 import { DRAW_SHUFFLE_MS, FINAL_SUSPENSE_MS } from "@/lib/constants";
 import type { AudioState, GameState, Sound, SoundRef, TeamTotals } from "@/lib/types";
 
@@ -15,6 +17,8 @@ interface AudioDirectorProps {
   sounds: Sound[];
   /** Show the "tap to enable audio" prompt while the browser blocks playback. */
   showUnlock?: boolean;
+  /** Spotify's player floats in a corner (the TV) instead of sitting inline. */
+  floatingPlayer?: boolean;
 }
 
 /**
@@ -24,7 +28,7 @@ interface AudioDirectorProps {
  * sync with what's on screen — and never for a state that was already in
  * progress when the page loaded.
  */
-export function AudioDirector({ gameState, totals, audioState, sounds, showUnlock }: AudioDirectorProps) {
+export function AudioDirector({ gameState, totals, audioState, sounds, showUnlock, floatingPlayer }: AudioDirectorProps) {
   const engine = getAudioEngine();
   const now = useTick(100);
   const unlocked = useSyncExternalStore(
@@ -67,9 +71,12 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
   }, [engine, audioState?.music_volume, audioState?.sfx_volume, audioState?.muted]);
 
   // --- Music ---------------------------------------------------------------
-  const musicUrl = audioState?.music_sound_id
+  const trackUrl = audioState?.music_sound_id
     ? sounds.find((s) => s.id === audioState.music_sound_id)?.url ?? null
     : null;
+  // Spotify links play in Spotify's own embed; the engine only handles audio files.
+  const spotify = trackUrl ? parseSpotify(trackUrl) : null;
+  const musicUrl = spotify ? null : trackUrl;
   const lastMusicNonce = useRef<number | null>(null);
   useEffect(() => {
     if (!audioState) return;
@@ -145,17 +152,31 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totals.palestrati, totals.divanisti]);
 
-  if (!showUnlock || unlocked) return null;
+  const spotifyPlayer =
+    spotify && audioState ? (
+      <SpotifyPlayer
+        uri={spotifyUri(spotify)}
+        status={audioState.music_status}
+        nonce={audioState.music_nonce}
+        muted={audioState.muted}
+        floating={floatingPlayer}
+      />
+    ) : null;
 
   return (
-    <button
-      type="button"
-      onClick={() => engine.unlock()}
-      className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold-400/60 bg-void/90 px-5 py-2.5 font-sans text-sm text-gold-300 shadow-lg backdrop-blur"
-    >
-      <SpeakerIcon />
-      Tocca per attivare l&apos;audio
-    </button>
+    <>
+      {spotifyPlayer}
+      {showUnlock && !unlocked && (
+        <button
+          type="button"
+          onClick={() => engine.unlock()}
+          className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold-400/60 bg-void/90 px-5 py-2.5 font-sans text-sm text-gold-300 shadow-lg backdrop-blur"
+        >
+          <SpeakerIcon />
+          Tocca per attivare l&apos;audio
+        </button>
+      )}
+    </>
   );
 }
 
