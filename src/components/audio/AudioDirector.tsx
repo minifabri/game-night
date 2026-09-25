@@ -122,6 +122,18 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // A new step of the running order gets the same stinger as the game start
+  // (skipped when starting the step is what started the game: that one fires above).
+  const showNonce = gameState.show_nonce ?? 0;
+  const prevShow = useRef<{ nonce: number; status: string } | null>(null);
+  useEffect(() => {
+    const prev = prevShow.current;
+    prevShow.current = { nonce: showNonce, status: gameState.status };
+    if (!prev || prev.nonce === showNonce || prev.status === "REGISTRATION") return;
+    if (gameState.status === "GAME") fire("game_start");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNonce]);
+
   const prevTotals = useRef<TeamTotals | null>(null);
   useEffect(() => {
     const prev = prevTotals.current;
@@ -172,6 +184,17 @@ function sceneKey(gs: GameState, now: number): string {
       const started = gs.final_started_at ? new Date(gs.final_started_at).getTime() : now;
       return `final:${gs.final_nonce}:${now - started >= FINAL_SUSPENSE_MS ? "reveal" : "suspense"}`;
     }
+    case "GAME": {
+      // A question with an answer timer running reuses the timer's effects.
+      if (gs.question_set && gs.question_index != null && gs.question_timer_ends_at) {
+        const remaining = msUntil(gs.question_timer_ends_at, now) ?? 0;
+        const n = gs.question_nonce ?? 0;
+        if (remaining <= 0) return `question:${n}:timeout`;
+        const seconds = Math.ceil(remaining / 1000);
+        return seconds <= 5 ? `question:${n}:last${seconds}` : `question:${n}:run`;
+      }
+      return "game";
+    }
     default:
       return gs.status.toLowerCase();
   }
@@ -184,7 +207,9 @@ function sceneEvents(
 ): { event: AutoEventId; durationMs?: number; cut?: boolean }[] {
   if (next === "paused") return [{ event: "pause" }];
   if (prev === "paused") return [{ event: "resume" }];
-  if (prev === "registration" && next === "game") return [{ event: "game_start" }];
+  if (prev === "registration" && (next === "game" || next.startsWith("question:"))) {
+    return [{ event: "game_start" }];
+  }
 
   const [kind, nonce, part = ""] = next.split(":");
   const [prevKind, prevNonce, prevPart = ""] = prev.split(":");
@@ -198,6 +223,13 @@ function sceneEvents(
     if (part.startsWith("last") && (prevPart === "run" || prevPart.startsWith("last"))) {
       return [{ event: "timer_tick" }];
     }
+    return [];
+  }
+  if (kind === "question") {
+    // Only within a run seen ticking, so a question already over on load stays silent.
+    if (!sameRun) return [];
+    if (part === "timeout" && prevPart !== "timeout") return [{ event: "timeout" }];
+    if (part.startsWith("last")) return [{ event: "timer_tick" }];
     return [];
   }
   if (kind === "draw") {

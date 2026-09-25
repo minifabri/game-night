@@ -18,9 +18,11 @@ interface ScoreboardProps {
   byChallenge: ChallengeRow[];
   variant?: "tv" | "phone";
   finalTag?: string;
+  /** Rendered above the totals (the running-order track). */
+  header?: React.ReactNode;
 }
 
-export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag }: ScoreboardProps) {
+export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag, header }: ScoreboardProps) {
   const isTv = variant === "tv";
 
   return (
@@ -31,6 +33,7 @@ export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag }:
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className={cn("mx-auto w-full", isTv ? "max-w-6xl px-10 py-8" : "max-w-md px-5 py-6")}
     >
+      {header}
       {finalTag && (
         <p className="mb-4 text-center font-sans text-xs uppercase tracking-[0.5em] text-gold-400">
           {finalTag}

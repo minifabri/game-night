@@ -33,6 +33,20 @@ async function main() {
     })
     .eq("id", 1);
   if (error) throw error;
+  // Scaletta + domande (migration 0007); ignored if the columns don't exist yet.
+  await supabase
+    .from("game_state")
+    .update({
+      show_step: null,
+      show_substep: null,
+      show_card: false,
+      question_set: null,
+      question_index: null,
+      question_answer_visible: false,
+      question_timer_ends_at: null,
+      finalissima_used: [],
+    })
+    .eq("id", 1);
 
   console.log("Data reset: no participants, scores at 0, status REGISTRATION.");
 }
