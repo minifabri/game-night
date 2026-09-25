@@ -65,6 +65,33 @@ export async function startGame(): Promise<ActionResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Participants
+// ---------------------------------------------------------------------------
+
+const deleteParticipantSchema = z.object({ participantId: z.string().uuid() });
+
+/**
+ * Removes a single registered participant. If they are the current draw pick,
+ * the FK (`on delete set null`) clears it and the screens fall back to "—".
+ */
+export async function deleteParticipant(input: { participantId: string }): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = deleteParticipantSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Partecipante non valido." };
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("participants")
+    .delete()
+    .eq("id", parsed.data.participantId);
+
+  if (error) return { ok: false, error: "Eliminazione non riuscita." };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // Pause
 // ---------------------------------------------------------------------------
 
