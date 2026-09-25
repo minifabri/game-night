@@ -5,7 +5,7 @@ import { clearShow, setShowCard, setShowSubstep, startShowStep } from "@/lib/act
 import { Panel } from "@/components/admin/Panel";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { SHOW_STEPS, getShowStep } from "@/lib/show";
+import { SHOW_STEPS, activeSubstep, getShowStep } from "@/lib/show";
 import type { GameState } from "@/lib/types";
 
 /** The evening's running order: start each step and light it up on every screen. */
@@ -141,7 +141,7 @@ function CurrentStepDetails({
 }) {
   const step = getShowStep(gameState.show_step);
   if (!step) return null;
-  const active = gameState.show_substep ?? 0;
+  const active = activeSubstep(step, gameState.show_substep);
   const activeSub = step.substeps?.[active];
 
   return (
@@ -163,12 +163,20 @@ function CurrentStepDetails({
                 )}
               >
                 <span className="block text-[0.6rem] uppercase tracking-[0.15em] opacity-70">
+                  {step.secretSubsteps && i > active ? "Svela · " : ""}
                   {step.substepLabel} {i + 1}
                 </span>
                 {sub.title}
               </button>
             ))}
           </div>
+          {step.secretSubsteps && (
+            <p className="mt-2 font-sans text-xs text-ink-dim">
+              {active < 0
+                ? "A schermo sono tutti coperti da «?»: tocca il primo per svelarlo."
+                : "Quelli dopo restano coperti finché non li tocchi."}
+            </p>
+          )}
           {activeSub?.script && <Script label={`Lancio — ${activeSub.title}`} text={activeSub.script} />}
         </div>
       )}

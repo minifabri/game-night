@@ -44,7 +44,10 @@ export interface ShowStep {
   substeps?: ShowSubstep[];
   /** Es. "Round", "Livello": prefisso dei sotto-step. */
   substepLabel?: string;
-  /** I sotto-step futuri restano coperti ("?") sul display finché non ci si arriva. */
+  /**
+   * Sotto-step a sorpresa: sul display restano coperti ("?") finché l'admin
+   * non li svela uno a uno; avviare lo step non ne svela nessuno.
+   */
   secretSubsteps?: boolean;
 }
 
@@ -101,10 +104,11 @@ export const SHOW_STEPS: ShowStep[] = [
     short: "Triathlon",
     kicker: "Gioco 3",
     title: "Triathlon fisico",
-    tagline: "Equilibrio · Combattimento · Precisione",
+    tagline: "Tre round. Scegliete bene chi mandare in campo.",
     time: "21:40",
     duration: "20 min",
     challengeId: "physical",
+    secretSubsteps: true,
     script:
       "Finora avete usato il cervello e, più o meno, la creatività. Adesso basta parlare: è il momento di vedere come ve la cavate fisicamente. Questa non è una prova sola. È un TRIATHLON in tre round: equilibrio, combattimento e precisione. Quindi scegliete bene chi mandare in campo, perché essere forti non basterà.",
     substeps: [
@@ -200,6 +204,11 @@ export const SHOW_STEP_IDS = SHOW_STEPS.map((s) => s.id) as [ShowStepId, ...Show
 
 export function getShowStep(id: string | null | undefined): ShowStep | null {
   return SHOW_STEPS.find((s) => s.id === id) ?? null;
+}
+
+/** Sotto-step acceso: per gli step a sorpresa -1 (nessuno svelato) finché l'admin non ne sceglie uno. */
+export function activeSubstep(step: ShowStep, substep: number | null | undefined): number {
+  return substep ?? (step.secretSubsteps ? -1 : 0);
 }
 
 /** game_state fields cleared by the resets (kept separate: they need migration 0007). */

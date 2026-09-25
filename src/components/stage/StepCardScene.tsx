@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { TEAMS } from "@/lib/constants";
-import { QUESTION_SETS, type ShowStep } from "@/lib/show";
+import { QUESTION_SETS, activeSubstep, type ShowStep } from "@/lib/show";
 import { StepTrack } from "@/components/stage/StepTrack";
 import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 import { Scoreboard } from "@/components/stage/Scoreboard";
@@ -68,7 +68,7 @@ export function StepCardScene({ step, gameState, totals, byChallenge, variant = 
           </div>
 
           {step.id === "opening" && <TeamsFaceOff isTv={isTv} />}
-          {step.substeps && <Substeps step={step} active={gameState.show_substep ?? 0} isTv={isTv} />}
+          {step.substeps && <Substeps step={step} active={activeSubstep(step, gameState.show_substep)} isTv={isTv} />}
           {step.id === "finalissima" && <NumberBoard used={gameState.finalissima_used ?? []} isTv={isTv} />}
           {step.id === "prefinal" && (
             <Scoreboard totals={totals} byChallenge={byChallenge} variant={variant} />

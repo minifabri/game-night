@@ -91,7 +91,7 @@ export async function startShowStep(input: { stepId: ShowStepId }): Promise<Acti
       ...scene.patch,
       ...NO_QUESTION,
       show_step: step.id,
-      show_substep: step.substeps ? 0 : null,
+      show_substep: step.substeps && !step.secretSubsteps ? 0 : null,
       show_card: true,
       show_nonce: ((scene.state.show_nonce as number) ?? 0) + 1,
     },
