@@ -70,6 +70,13 @@ Come per il resto, lo stato vive in una riga singleton (`audio_state`) scritta s
 
 > **Autoplay**: i browser bloccano l'audio finché non c'è un'interazione. Sulla TV compare "Tocca per attivare l'audio": basta un click/tap (o un tasto del telecomando) una volta dopo aver aperto `/display`.
 
+## Schermo della TV
+
+Muovendo il mouse su `/display` compaiono in alto a destra (e spariscono dopo 3 secondi insieme al cursore):
+
+- **Schermo intero**: pulsante oppure tasto `F`.
+- **Blocco dello standby**: la pagina chiede al browser di tenere lo schermo acceso (Screen Wake Lock API) e lo richiede di nuovo quando la scheda torna visibile. Il badge dice "Schermo sempre acceso" se il blocco è attivo. Serve HTTPS (o `localhost`); sui browser che non lo supportano lo standby va disattivato a mano dalle impostazioni del computer/TV.
+
 ## Setup locale
 
 Requisiti: Node.js ≥ 22.6 (usa `--experimental-strip-types` per gli script di dev), un progetto Supabase.
