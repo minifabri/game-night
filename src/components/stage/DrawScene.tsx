@@ -27,11 +27,23 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
   const gymPool = participants.filter((p) => p.team_id === "palestrati").map((p) => p.name);
   const couchPool = participants.filter((p) => p.team_id === "divanisti").map((p) => p.name);
 
-  const gymFinal = participants.find((p) => p.id === gameState.draw_gym_participant_id)?.name ?? "—";
-  const couchFinal = participants.find((p) => p.id === gameState.draw_couch_participant_id)?.name ?? "—";
+  const gymFinal = participants.find((p) => p.id === gameState.draw_gym_participant_id)?.name ?? null;
+  const couchFinal = participants.find((p) => p.id === gameState.draw_couch_participant_id)?.name ?? null;
 
-  const gymShuffle = useShuffleName(gymPool, gameState.draw_nonce, revealed, gymFinal);
-  const couchShuffle = useShuffleName(couchPool, gameState.draw_nonce, revealed, couchFinal);
+  // A single-team draw only shuffles that team; the other side shows its
+  // earlier pick (the opponent) or a question mark if not drawn yet.
+  const drawingGym = gameState.draw_team !== "divanisti";
+  const drawingCouch = gameState.draw_team !== "palestrati";
+
+  const gymShuffle = useShuffleName(drawingGym ? gymPool : [], gameState.draw_nonce, revealed, gymFinal ?? "—");
+  const couchShuffle = useShuffleName(drawingCouch ? couchPool : [], gameState.draw_nonce, revealed, couchFinal ?? "—");
+
+  const heading =
+    gameState.draw_team === "palestrati"
+      ? "Estrazione Palestrati"
+      : gameState.draw_team === "divanisti"
+        ? "Estrazione Divanisti"
+        : "Estrazione in corso";
 
   useEffect(() => {
     if (!isCanonical) return;
@@ -43,19 +55,24 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 text-center">
-      {!revealed && (
-        <p className={cn("font-sans uppercase tracking-[0.5em] text-gold-400", isTv ? "text-xl" : "text-xs")}>
-          Estrazione in corso
-        </p>
-      )}
+      <p
+        className={cn(
+          "font-sans uppercase tracking-[0.5em] text-gold-400 transition-opacity",
+          isTv ? "text-xl" : "text-xs",
+          revealed && !gameState.draw_team && "opacity-0"
+        )}
+      >
+        {heading}
+      </p>
 
       <div className={cn("flex w-full flex-col items-center", isTv ? "gap-10" : "gap-6")}>
         <NamePod
           teamLabel="Palestrati"
-          name={revealed ? gymFinal : gymShuffle}
+          name={drawingGym ? (revealed ? gymFinal ?? "—" : gymShuffle) : gymFinal}
           color="gym"
           isTv={isTv}
           revealed={revealed}
+          idle={!drawingGym}
         />
 
         <motion.p
@@ -68,10 +85,11 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
 
         <NamePod
           teamLabel="Divanisti"
-          name={revealed ? couchFinal : couchShuffle}
+          name={drawingCouch ? (revealed ? couchFinal ?? "—" : couchShuffle) : couchFinal}
           color="couch"
           isTv={isTv}
           revealed={revealed}
+          idle={!drawingCouch}
           reverse
         />
       </div>
@@ -85,15 +103,20 @@ function NamePod({
   color,
   isTv,
   revealed,
+  idle,
   reverse,
 }: {
   teamLabel: string;
-  name: string;
+  /** null = this team hasn't been drawn yet (only when `idle`). */
+  name: string | null;
   color: "gym" | "couch";
   isTv: boolean;
   revealed: boolean;
+  /** Not part of the current draw: shown still, dimmed, with no reveal animation. */
+  idle?: boolean;
   reverse?: boolean;
 }) {
+  const glow = revealed || idle;
   return (
     <div className={cn("flex flex-col items-center", reverse && "flex-col-reverse")}>
       <p
@@ -107,18 +130,18 @@ function NamePod({
       </p>
       <AnimatePresence mode="popLayout">
         <motion.p
-          key={name}
-          initial={{ opacity: 0, y: revealed ? 20 : 4, scale: revealed ? 0.85 : 1 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
+          key={name ?? "?"}
+          initial={idle ? false : { opacity: 0, y: revealed ? 20 : 4, scale: revealed ? 0.85 : 1 }}
+          animate={{ opacity: idle ? 0.55 : 1, y: 0, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: revealed ? 0.5 : 0.08, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
             "font-display font-medium leading-tight text-cream",
-            revealed && (color === "gym" ? "drop-shadow-[0_0_24px_rgba(255,106,69,0.45)]" : "drop-shadow-[0_0_24px_rgba(87,211,200,0.45)]"),
+            name && glow && (color === "gym" ? "drop-shadow-[0_0_24px_rgba(255,106,69,0.45)]" : "drop-shadow-[0_0_24px_rgba(87,211,200,0.45)]"),
             isTv ? "text-7xl" : "text-4xl"
           )}
         >
-          {name}
+          {name ?? "?"}
         </motion.p>
       </AnimatePresence>
     </div>

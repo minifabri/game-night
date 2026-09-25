@@ -29,7 +29,7 @@ teams          (id, name, sort_order)                     — 'palestrati' | 'di
 challenges     (id, name, sort_order)                      — le 5 prove, seed fisso
 participants   (id, name, team_id, brings_food, brings_drink, created_at)
 scores         (challenge_id, team_id, points, updated_at) — PK composita, una riga per prova×squadra
-game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, updated_at) — riga singola (singleton)
+game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, announcement_message, updated_at) — riga singola (singleton)
 sounds         (id, name, kind 'music'|'sfx', url, storage_path, created_at) — libreria della console audio
 audio_state    (id=1, music_*, sfx_*, stop_nonce, muted, auto_enabled, auto_map) — comandi audio (singleton)
 ```
@@ -43,6 +43,10 @@ REGISTRATION → GAME → TIMER → DRAW → FINAL_REVEAL → FINISHED
 
 GAME / TIMER ⇄ PAUSED   (pausa manuale dall'admin; un timer in corso viene congelato e riparte alla ripresa)
 ```
+
+**Estrazione per squadra**: l'admin estrae un concorrente alla volta ("Estrai Palestrato", "Estrai Divanista"). `draw_team` dice quale squadra si sta estraendo; l'estratto dell'altra squadra, se c'è già, resta a schermo come avversario. Estrarre di nuovo una squadra che ha già il suo concorrente apre una nuova sfida (l'altro estratto viene azzerato); "Nuova sfida" li azzera entrambi.
+
+**Messaggio a schermo**: `announcement_message` non è uno stato ma un overlay: quando è valorizzato, TV e telefoni mostrano la scritta sopra qualunque scena (la scena sotto continua, es. un timer). "Togli" lo rimette a `NULL`.
 
 Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi [Setup database](#setup-database).
 
@@ -136,8 +140,9 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] Modificare un punteggio nell'admin aggiorna `/display` in tempo reale, con l'animazione del numero.
 - [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT → ritorno automatico alla scoreboard dopo ~3s.
 - [ ] Pausa / Riprendi mantengono il tempo corretto; Stop torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
-- [ ] "Estrai concorrenti" con partecipanti in entrambe le squadre: shuffle, rallentamento, reveal, ritorno automatico.
-- [ ] "Estrai concorrenti" con una squadra vuota: errore gestito, nessun crash.
+- [ ] "Estrai Palestrato": shuffle solo sui Palestrati, lato Divanisti con "?", reveal, ritorno automatico. Poi "Estrai Divanista": il Palestrato estratto resta a schermo come avversario.
+- [ ] Estrazione di una squadra vuota: errore gestito, nessun crash.
+- [ ] "Messaggio a schermo": Mostra / Sostituisci / Togli, anche durante un timer (il timer continua sotto e riappare quando il messaggio viene tolto).
 - [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
 - [ ] Pareggio: azzera i punteggi delle due squadre e rilancia "Termina gioco" per vedere la schermata PAREGGIO dedicata.
 - [ ] "Metti in pausa" (con e senza messaggio) dalla scoreboard e durante un timer: tutti gli schermi mostrano PAUSA; "Riprendi il gioco" torna dove si era e il timer riparte dal tempo rimasto.
@@ -167,5 +172,5 @@ src/
     supabase/              # client browser (anon) e admin (service role)
     auth.ts, constants.ts, types.ts, format.ts, cn.ts
 scripts/                  # seed.ts, reset.ts (CLI, service role key)
-supabase/migrations/      # schema, RLS, realtime publication, pausa, audio
+supabase/migrations/      # schema, RLS, realtime publication, pausa, audio, estrazione per squadra + messaggio a schermo
 ```

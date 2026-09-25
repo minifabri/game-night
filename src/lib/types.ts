@@ -62,6 +62,8 @@ export interface GameState {
   draw_couch_participant_id: string | null;
   draw_started_at: string | null;
   draw_nonce: number;
+  /** Team being drawn in the current DRAW run; null for a draw of both teams at once. */
+  draw_team: TeamId | null;
 
   final_started_at: string | null;
   final_gym_score: number | null;
@@ -73,6 +75,9 @@ export interface GameState {
   pause_previous_status: "GAME" | "TIMER" | null;
   pause_message: string | null;
   pause_resumes_timer: boolean;
+
+  /** Text overlaid on every screen (instructions, announcements); null when hidden. */
+  announcement_message: string | null;
 
   updated_at: string;
 }

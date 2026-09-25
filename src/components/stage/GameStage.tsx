@@ -12,6 +12,7 @@ import { DrawScene } from "@/components/stage/DrawScene";
 import { FinalRevealScene } from "@/components/stage/FinalRevealScene";
 import { FinishedScreen } from "@/components/stage/FinishedScreen";
 import { PausedScene } from "@/components/stage/PausedScene";
+import { AnnouncementOverlay } from "@/components/stage/AnnouncementOverlay";
 import { StageAudio } from "@/components/audio/StageAudio";
 
 interface GameStageProps {
@@ -65,6 +66,13 @@ export function GameStage({ variant = "phone", isCanonical = false, withAudio = 
         )}
         {gameState.status === "PAUSED" && (
           <PausedScene key="paused" gameState={gameState} totals={totals} variant={variant} />
+        )}
+      </AnimatePresence>
+      {/* Overlaid rather than a status of its own, so the scene underneath (a
+          running timer, the scoreboard…) keeps going while the message is up. */}
+      <AnimatePresence>
+        {gameState.announcement_message && (
+          <AnnouncementOverlay key="announcement" message={gameState.announcement_message} variant={variant} />
         )}
       </AnimatePresence>
     </>

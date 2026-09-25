@@ -14,6 +14,7 @@ import { ParticipantsPanel } from "@/components/admin/ParticipantsPanel";
 import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
+import { AnnouncementPanel } from "@/components/admin/AnnouncementPanel";
 import { SoundConsole } from "@/components/admin/SoundConsole";
 import { ResetScoresPanel } from "@/components/admin/ResetScoresPanel";
 import { DevResetPanel } from "@/components/admin/DevResetPanel";
@@ -51,10 +52,11 @@ export function AdminDashboard() {
       </header>
 
       <GameLifecyclePanel gameState={gameState} />
+      <AnnouncementPanel gameState={gameState} />
       <ParticipantsPanel participants={participants} />
       <ScoreEditor byChallenge={byChallenge} />
       <TimerControls gameState={gameState} />
-      <DrawControl gameState={gameState} />
+      <DrawControl gameState={gameState} participants={participants} />
       <SoundConsole
         gameState={gameState}
         totals={totals}

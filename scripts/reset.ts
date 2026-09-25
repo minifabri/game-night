@@ -20,6 +20,7 @@ async function main() {
       draw_gym_participant_id: null,
       draw_couch_participant_id: null,
       draw_started_at: null,
+      draw_team: null,
       final_started_at: null,
       final_gym_score: null,
       final_couch_score: null,
@@ -28,6 +29,7 @@ async function main() {
       pause_previous_status: null,
       pause_message: null,
       pause_resumes_timer: false,
+      announcement_message: null,
     })
     .eq("id", 1);
   if (error) throw error;
