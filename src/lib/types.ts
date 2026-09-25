@@ -79,6 +79,22 @@ export interface GameState {
   /** Text overlaid on every screen (instructions, announcements); null when hidden. */
   announcement_message: string | null;
 
+  /** Scaletta (see lib/show.ts). Optional: undefined until migration 0007 is applied. */
+  show_step?: string | null;
+  show_substep?: number | null;
+  /** Full-screen card of the current step in place of the scoreboard. */
+  show_card?: boolean;
+  show_nonce?: number;
+
+  /** Question on screen: set + index into QUESTION_SETS; null when none. */
+  question_set?: string | null;
+  question_index?: number | null;
+  question_answer_visible?: boolean;
+  question_timer_ends_at?: string | null;
+  question_nonce?: number;
+  /** Finalissima numbers (1-20) already picked. */
+  finalissima_used?: number[];
+
   updated_at: string;
 }
 

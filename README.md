@@ -29,7 +29,7 @@ teams          (id, name, sort_order)                     — 'palestrati' | 'di
 challenges     (id, name, sort_order)                      — le 5 prove, seed fisso
 participants   (id, name, team_id, brings_food, brings_drink, created_at)
 scores         (challenge_id, team_id, points, updated_at) — PK composita, una riga per prova×squadra
-game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, announcement_message, updated_at) — riga singola (singleton)
+game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, announcement_message, show_*, question_*, finalissima_used, updated_at) — riga singola (singleton)
 sounds         (id, name, kind 'music'|'sfx', url, storage_path, created_at) — libreria della console audio
 audio_state    (id=1, music_*, sfx_*, stop_nonce, muted, auto_enabled, auto_map) — comandi audio (singleton)
 ```
@@ -47,6 +47,8 @@ GAME / TIMER ⇄ PAUSED   (pausa manuale dall'admin; un timer in corso viene con
 **Estrazione per squadra**: "Estrai Palestrato" ed "Estrai Divanista" sono indipendenti (si può estrarre anche una sola squadra). `draw_team` dice quale squadra è a schermo e la scena mostra solo quella. Il nome estratto resta a schermo fino a "Torna al tabellone" dall'admin (o, al massimo, 5 minuti); da lì si può anche estrarre subito l'altra squadra.
 
 **Messaggio a schermo**: `announcement_message` non è uno stato ma un overlay: quando è valorizzato, TV e telefoni mostrano la scritta sopra qualunque scena (la scena sotto continua, es. un timer). "Togli" lo rimette a `NULL`.
+
+**Scaletta e domande a schermo**: la scaletta della serata (Apertura → Quiz → Pubblicità → Triathlon → Coraggio → Classifica pre-finale → Finalissima → Proclamazione) e tutte le domande sono in `src/lib/show.ts`. Dal pannello admin «Scaletta della serata» ogni step si avvia con un tap: su TV e telefoni compare la sua scheda a tutto schermo e lo step resta illuminato nella barra degli step, anche tornando al tabellone. Gli step con sotto-prove (round del quiz, prove del triathlon, livelli di coraggio — triathlon e coraggio sono a sorpresa: sul display restano tutti «?» finché non li sveli uno a uno) si scorrono dallo stesso pannello, che mostra anche i testi "da dire". Dal pannello «Domande a schermo» si manda una domanda sul display e si va avanti/indietro: i quadri mostrano **solo l'immagine** (file in `public/quiz/arte/`, vedi `LEGGIMI.md` lì), il quiz fa partire da solo 10 secondi, la risposta compare solo con «Mostra risposta». La Finalissima mostra il tabellone dei 20 numeri: il numero scelto va a schermo e si spegne. Tutto vive nelle colonne `show_*` / `question_*` / `finalissima_used` di `game_state` (migration `0007`) e viene mostrato solo quando lo stato è `GAME`: timer, estrazione e pausa hanno la precedenza.
 
 Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi [Setup database](#setup-database).
 
@@ -143,6 +145,8 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] "Estrai Palestrato": a schermo solo i Palestrati, shuffle, reveal, il nome resta finché non premi "Torna al tabellone". Stesso per "Estrai Divanista", anche direttamente dalla schermata dell'altra estrazione.
 - [ ] Estrazione di una squadra vuota: errore gestito, nessun crash.
 - [ ] "Messaggio a schermo": Mostra / Sostituisci / Togli, anche durante un timer (il timer continua sotto e riappare quando il messaggio viene tolto).
+- [ ] Scaletta: «Inizia: Apertura» dalla sala d'attesa avvia il gioco e mostra la scheda; «Avanti» accende lo step dopo nella barra; «Torna al tabellone» lascia lo step illuminato sopra la scoreboard; triathlon e coraggio partono tutti coperti da «?» e si svelano solo toccando il singolo step/livello.
+- [ ] Domande: un quadro mostra solo l'immagine (nessun file mancante segnalato in admin), countdown 10s con tic e buzzer, «Succ» dall'ultima di Arte passa a Libri, «Mostra risposta», «Togli dal display». Finalissima: tabellone dei 20 numeri, il numero scelto si spegne.
 - [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
 - [ ] Pareggio: azzera i punteggi delle due squadre e rilancia "Termina gioco" per vedere la schermata PAREGGIO dedicata.
 - [ ] "Metti in pausa" (con e senza messaggio) dalla scoreboard e durante un timer: tutti gli schermi mostrano PAUSA; "Riprendi il gioco" torna dove si era e il timer riparte dal tempo rimasto.
@@ -172,5 +176,6 @@ src/
     supabase/              # client browser (anon) e admin (service role)
     auth.ts, constants.ts, types.ts, format.ts, cn.ts
 scripts/                  # seed.ts, reset.ts (CLI, service role key)
-supabase/migrations/      # schema, RLS, realtime publication, pausa, audio, estrazione per squadra + messaggio a schermo
+supabase/migrations/      # schema, RLS, realtime publication, pausa, audio, estrazione per squadra + messaggio a schermo, scaletta + domande
+public/quiz/arte/         # le immagini dei quadri del quiz (da aggiungere, vedi LEGGIMI.md)
 ```

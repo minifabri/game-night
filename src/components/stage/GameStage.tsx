@@ -14,6 +14,10 @@ import { FinishedScreen } from "@/components/stage/FinishedScreen";
 import { PausedScene } from "@/components/stage/PausedScene";
 import { AnnouncementOverlay } from "@/components/stage/AnnouncementOverlay";
 import { StageAudio } from "@/components/audio/StageAudio";
+import { StepCardScene } from "@/components/stage/StepCardScene";
+import { QuestionScene } from "@/components/stage/QuestionScene";
+import { StepTrack } from "@/components/stage/StepTrack";
+import { getQuestion, getShowStep } from "@/lib/show";
 
 interface GameStageProps {
   variant?: "tv" | "phone";
@@ -36,6 +40,13 @@ export function GameStage({ variant = "phone", isCanonical = false, withAudio = 
     return <StatusScreen kind="loading" message="Accendiamo le luci…" />;
   }
 
+  // On the scoreboard status the running order can take over the screen: a
+  // question first, else the current step's card, else the scoreboard (with
+  // the step track on top once the show has started).
+  const step = getShowStep(gameState.show_step);
+  const hasQuestion = getQuestion(gameState.question_set, gameState.question_index) !== null;
+  const gameScene = hasQuestion ? "question" : step && gameState.show_card ? "step" : "scoreboard";
+
   return (
     <>
       {withAudio && <StageAudio gameState={gameState} totals={totals} />}
@@ -43,8 +54,27 @@ export function GameStage({ variant = "phone", isCanonical = false, withAudio = 
         {gameState.status === "REGISTRATION" && (
           <WaitingRoom key="waiting" participants={participants} variant={variant} />
         )}
-        {gameState.status === "GAME" && (
-          <Scoreboard key="scoreboard" totals={totals} byChallenge={byChallenge} variant={variant} />
+        {gameState.status === "GAME" && gameScene === "question" && (
+          <QuestionScene key="question" gameState={gameState} variant={variant} />
+        )}
+        {gameState.status === "GAME" && gameScene === "step" && step && (
+          <StepCardScene
+            key="step"
+            step={step}
+            gameState={gameState}
+            totals={totals}
+            byChallenge={byChallenge}
+            variant={variant}
+          />
+        )}
+        {gameState.status === "GAME" && gameScene === "scoreboard" && (
+          <Scoreboard
+            key="scoreboard"
+            totals={totals}
+            byChallenge={byChallenge}
+            variant={variant}
+            header={step && <StepTrack current={step.id} variant={variant} className={variant === "tv" ? "mb-10" : "mb-5"} />}
+          />
         )}
         {gameState.status === "TIMER" && (
           <TimerScene key="timer" gameState={gameState} isCanonical={isCanonical} variant={variant} />

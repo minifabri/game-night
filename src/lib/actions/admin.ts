@@ -18,6 +18,7 @@ import {
   TIMER_STARTUP_COUNTDOWN_MS,
   TIMER_TIMEOUT_HOLD_MS,
 } from "@/lib/constants";
+import { SHOW_RESET_PATCH } from "@/lib/show";
 import type { ChallengeId, TeamId } from "@/lib/types";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -666,6 +667,8 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
     .eq("id", 1);
 
   if (error) return { ok: false, error: "Reset punteggi non riuscito." };
+  // Best effort: these columns only exist once migration 0007 is applied.
+  await supabase.from("game_state").update(SHOW_RESET_PATCH).eq("id", 1);
   return { ok: true };
 }
 
@@ -710,5 +713,6 @@ export async function resetGameData(): Promise<ActionResult> {
     .eq("id", 1);
 
   if (error) return { ok: false, error: "Reset non riuscito." };
+  await supabase.from("game_state").update(SHOW_RESET_PATCH).eq("id", 1);
   return { ok: true };
 }
