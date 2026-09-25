@@ -217,6 +217,47 @@ export async function setScore(input: {
   return { ok: true };
 }
 
+const adjustScoreSchema = z.object({
+  challengeId: setScoreSchema.shape.challengeId,
+  teamId: setScoreSchema.shape.teamId,
+  delta: z.number().int().min(-10).max(10),
+});
+
+/**
+ * +/- on the current points, read server-side: quick repeated taps from the
+ * admin's sticky bar each build on the latest value instead of a stale one
+ * (Next runs a client's server actions one after the other).
+ */
+export async function adjustScore(input: {
+  challengeId: ChallengeId;
+  teamId: TeamId;
+  delta: number;
+}): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = adjustScoreSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Punteggio non valido." };
+
+  const supabase = getSupabaseAdminClient();
+  const { data: row } = await supabase
+    .from("scores")
+    .select("points")
+    .eq("challenge_id", parsed.data.challengeId)
+    .eq("team_id", parsed.data.teamId)
+    .single();
+
+  const points = Math.max(0, Math.min(999, ((row?.points as number) ?? 0) + parsed.data.delta));
+  const { error } = await supabase
+    .from("scores")
+    .update({ points })
+    .eq("challenge_id", parsed.data.challengeId)
+    .eq("team_id", parsed.data.teamId);
+
+  if (error) return { ok: false, error: "Impossibile salvare il punteggio." };
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Timer
 // ---------------------------------------------------------------------------
