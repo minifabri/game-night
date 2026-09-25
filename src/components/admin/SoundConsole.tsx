@@ -267,7 +267,7 @@ export function SoundConsole({ gameState, totals, audioState, audioError, sounds
         })}
       </div>
 
-      {error && <p className="mb-3 text-center font-sans text-sm text-danger">{error}</p>}
+      {error && <p className="mb-3 text-center font-sans text-sm text-gym">{error}</p>}
 
       <SoundLibrary sounds={sounds} autoMap={audioState.auto_map} />
     </Panel>
@@ -304,7 +304,7 @@ function Toggle({
         "rounded-full border px-4 py-2 font-sans text-xs",
         on
           ? danger
-            ? "border-danger bg-danger/15 text-danger"
+            ? "border-gym bg-gym/15 text-gym"
             : "border-gold-400 bg-gold-400/15 text-gold-300"
           : "border-ink-dim/30 text-ink-dim hover:text-cream"
       )}

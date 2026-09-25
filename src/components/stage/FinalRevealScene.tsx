@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { useTick } from "@/hooks/useTick";
 import { FINAL_SUSPENSE_MS, FINAL_TOTAL_MS } from "@/lib/constants";
 import { settleFinalReveal } from "@/lib/actions/admin";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
+import { TEAMS } from "@/lib/constants";
 import { Particles } from "@/components/stage/Particles";
 import type { GameState } from "@/lib/types";
 
@@ -33,12 +33,11 @@ export function FinalRevealScene({ gameState, isCanonical, variant = "phone" }: 
     settleFinalReveal();
   }, [isCanonical, elapsed, gameState.final_nonce]);
 
-  const { teams } = useGameContent();
-  const winner = gameState.final_winner_team_id ?? "a";
+  const winnerColor = gameState.final_winner_team_id === "palestrati" ? "gym" : "couch";
 
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 text-center">
-      {revealed && <Particles color={gameState.final_is_draw ? "gold" : winner} />}
+      {revealed && <Particles color={gameState.final_is_draw ? "gold" : winnerColor} />}
 
       <AnimatePresence mode="wait">
         {!revealed ? (
@@ -72,9 +71,9 @@ export function FinalRevealScene({ gameState, isCanonical, variant = "phone" }: 
               </motion.span>
             </p>
             <div className={cn("flex gap-10 font-numeric text-ink-dim", isTv ? "text-4xl" : "text-2xl")}>
-              <span>{gameState.final_a_score ?? 0}</span>
+              <span>{gameState.final_gym_score ?? 0}</span>
               <span className="opacity-40">–</span>
-              <span>{gameState.final_b_score ?? 0}</span>
+              <span>{gameState.final_couch_score ?? 0}</span>
             </div>
           </motion.div>
         ) : gameState.final_is_draw ? (
@@ -94,7 +93,7 @@ export function FinalRevealScene({ gameState, isCanonical, variant = "phone" }: 
               Pareggio!
             </p>
             <p className={cn("font-numeric text-cream", isTv ? "text-5xl" : "text-3xl")}>
-              {gameState.final_a_score} – {gameState.final_b_score}
+              {gameState.final_gym_score} – {gameState.final_couch_score}
             </p>
           </motion.div>
         ) : (
@@ -111,17 +110,17 @@ export function FinalRevealScene({ gameState, isCanonical, variant = "phone" }: 
             <p
               className={cn(
                 "font-display font-medium tracking-[0.04em]",
-                winner === "a" ? "text-team-a" : "text-team-b",
-                winner === "a"
-                  ? "drop-shadow-[0_0_60px_color-mix(in_srgb,var(--color-team-a)_55%,transparent)]"
-                  : "drop-shadow-[0_0_60px_color-mix(in_srgb,var(--color-team-b)_55%,transparent)]",
+                winnerColor === "gym" ? "text-gym" : "text-couch",
+                winnerColor === "gym"
+                  ? "drop-shadow-[0_0_60px_rgba(255,106,69,0.55)]"
+                  : "drop-shadow-[0_0_60px_rgba(87,211,200,0.55)]",
                 isTv ? "text-[10rem]" : "text-7xl"
               )}
             >
-              {gameState.final_winner_team_id ? teams[gameState.final_winner_team_id].name : ""}!
+              {gameState.final_winner_team_id ? TEAMS[gameState.final_winner_team_id].name : ""}!
             </p>
             <p className={cn("font-numeric text-cream", isTv ? "text-5xl" : "text-3xl")}>
-              {gameState.final_a_score} – {gameState.final_b_score}
+              {gameState.final_gym_score} – {gameState.final_couch_score}
             </p>
           </motion.div>
         )}

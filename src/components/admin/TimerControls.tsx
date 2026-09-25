@@ -99,7 +99,7 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
         Torna al tabellone
       </Button>
 
-      {error && <p className="mt-3 text-center font-sans text-sm text-danger">{error}</p>}
+      {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
     </Panel>
   );
 }

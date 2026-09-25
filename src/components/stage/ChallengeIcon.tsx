@@ -1,13 +1,12 @@
-import type { IconId } from "@/lib/game";
+import type { ChallengeId } from "@/lib/types";
 
 interface ChallengeIconProps {
-  /** Icon from the game content; unknown or missing ones get a star. */
-  icon?: IconId;
+  id: ChallengeId;
   className?: string;
 }
 
 /** Minimal line icons echoing the event poster's per-challenge glyphs. */
-export function ChallengeIcon({ icon, className }: ChallengeIconProps) {
+export function ChallengeIcon({ id, className }: ChallengeIconProps) {
   const props = {
     className,
     viewBox: "0 0 24 24",
@@ -18,7 +17,7 @@ export function ChallengeIcon({ icon, className }: ChallengeIconProps) {
     strokeLinejoin: "round" as const,
   };
 
-  switch (icon) {
+  switch (id) {
     case "quiz":
       return (
         <svg {...props} aria-hidden="true">
@@ -60,12 +59,6 @@ export function ChallengeIcon({ icon, className }: ChallengeIconProps) {
           <path d="M4 20V13a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v7" />
           <path d="M15 20V9a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v11" />
           <path d="M3 20h18" />
-        </svg>
-      );
-    default:
-      return (
-        <svg {...props} aria-hidden="true">
-          <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9L12 3.5Z" />
         </svg>
       );
   }

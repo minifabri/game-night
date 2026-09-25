@@ -2,11 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { TEAM_ORDER } from "@/lib/constants";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
+import { TEAM_ORDER, TEAMS } from "@/lib/constants";
 import type { Participant, TeamId } from "@/lib/types";
 import { HeroImage } from "@/components/brand/HeroImage";
-import { Wordmark } from "@/components/brand/Wordmark";
 
 interface WaitingRoomProps {
   participants: Participant[];
@@ -15,8 +13,7 @@ interface WaitingRoomProps {
 
 export function WaitingRoom({ participants, variant = "phone" }: WaitingRoomProps) {
   const isTv = variant === "tv";
-  const content = useGameContent();
-  const byTeam: Record<TeamId, Participant[]> = { a: [], b: [] };
+  const byTeam: Record<TeamId, Participant[]> = { palestrati: [], divanisti: [] };
   for (const p of participants) byTeam[p.team_id].push(p);
 
   return (
@@ -29,11 +26,7 @@ export function WaitingRoom({ participants, variant = "phone" }: WaitingRoomProp
     >
       {isTv && (
         <div className="mx-auto w-full max-w-3xl">
-          {content.heroImage ? (
-            <HeroImage priority />
-          ) : (
-            <Wordmark size="xl" className="pb-12 pt-16" />
-          )}
+          <HeroImage priority />
           <p className="-mt-4 pb-2 text-center font-sans text-sm uppercase tracking-[0.4em] text-ink-dim">
             In attesa che la sfida cominci
           </p>
@@ -47,7 +40,7 @@ export function WaitingRoom({ participants, variant = "phone" }: WaitingRoomProp
         )}
       >
         {TEAM_ORDER.map((teamId) => (
-          <TeamColumn key={teamId} teamId={teamId} name={content.teams[teamId].name} people={byTeam[teamId]} isTv={isTv} />
+          <TeamColumn key={teamId} teamId={teamId} people={byTeam[teamId]} isTv={isTv} />
         ))}
       </div>
     </motion.div>
@@ -56,23 +49,21 @@ export function WaitingRoom({ participants, variant = "phone" }: WaitingRoomProp
 
 function TeamColumn({
   teamId,
-  name,
   people,
   isTv,
 }: {
   teamId: TeamId;
-  name: string;
   people: Participant[];
   isTv: boolean;
 }) {
-  const color = teamId === "a" ? "text-team-a" : "text-team-b";
-  const borderColor = teamId === "a" ? "border-team-a/30" : "border-team-b/30";
+  const color = teamId === "palestrati" ? "text-gym" : "text-couch";
+  const borderColor = teamId === "palestrati" ? "border-gym/30" : "border-couch/30";
 
   return (
     <div className={cn("flex flex-col rounded-2xl border bg-plum-900/30 backdrop-blur-sm", borderColor, isTv ? "p-6" : "p-4")}>
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className={cn("font-display font-medium", color, isTv ? "text-2xl" : "text-lg")}>
-          {name}
+          {TEAMS[teamId].name}
         </h3>
         <span className={cn("font-numeric text-gold-300", isTv ? "text-3xl" : "text-xl")}>
           {people.length}

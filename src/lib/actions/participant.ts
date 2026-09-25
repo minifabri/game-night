@@ -2,12 +2,11 @@
 
 import { z } from "zod";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { loadActiveGame } from "@/lib/active-game";
 import type { TeamId } from "@/lib/types";
 
 const registerSchema = z.object({
   name: z.string().trim().min(1, "Inserisci il tuo nome").max(60),
-  teamId: z.enum(["a", "b"]),
+  teamId: z.enum(["palestrati", "divanisti"]),
   bringsFood: z.boolean(),
   bringsDrink: z.boolean(),
 });
@@ -30,11 +29,7 @@ export async function registerParticipant(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi." };
   }
-
-  const game = await loadActiveGame();
-  if (!game.ok) return { ok: false, error: "Registrazione non disponibile. Riprova tra poco." };
-  const asksBring = Boolean(game.content.registration?.bring);
-  if (asksBring && !parsed.data.bringsFood && !parsed.data.bringsDrink) {
+  if (!parsed.data.bringsFood && !parsed.data.bringsDrink) {
     return { ok: false, error: "Scegli almeno una cosa da portare." };
   }
 
@@ -42,7 +37,6 @@ export async function registerParticipant(
   const { data, error } = await supabase
     .from("participants")
     .insert({
-      game_id: game.gameId,
       name: parsed.data.name,
       team_id: parsed.data.teamId,
       brings_food: parsed.data.bringsFood,

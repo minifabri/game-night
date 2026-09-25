@@ -2,25 +2,24 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
+import { TEAMS } from "@/lib/constants";
 import { Scoreboard } from "@/components/stage/Scoreboard";
 import type { GameState, TeamTotals } from "@/lib/types";
-import type { ChallengeRow } from "@/hooks/useScores";
+import type { ChallengeId } from "@/lib/types";
 
 interface FinishedScreenProps {
   gameState: GameState;
-  byChallenge: ChallengeRow[];
+  byChallenge: { challengeId: ChallengeId; palestrati: number; divanisti: number }[];
   variant?: "tv" | "phone";
 }
 
 export function FinishedScreen({ gameState, byChallenge, variant = "phone" }: FinishedScreenProps) {
   const isTv = variant === "tv";
   const totals: TeamTotals = {
-    a: gameState.final_a_score ?? 0,
-    b: gameState.final_b_score ?? 0,
+    palestrati: gameState.final_gym_score ?? 0,
+    divanisti: gameState.final_couch_score ?? 0,
   };
-  const { teams } = useGameContent();
-  const winner = gameState.final_winner_team_id ?? "a";
+  const winnerColor = gameState.final_winner_team_id === "palestrati" ? "gym" : "couch";
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 py-10">
@@ -35,13 +34,13 @@ export function FinishedScreen({ gameState, byChallenge, variant = "phone" }: Fi
         <p
           className={cn(
             "font-display font-medium",
-            gameState.final_is_draw ? "text-gold-300" : winner === "a" ? "text-team-a" : "text-team-b",
+            gameState.final_is_draw ? "text-gold-300" : winnerColor === "gym" ? "text-gym" : "text-couch",
             isTv ? "text-6xl" : "text-3xl"
           )}
         >
           {gameState.final_is_draw
             ? "Pareggio"
-            : `${teams[winner].name} vincono!`}
+            : `${TEAMS[gameState.final_winner_team_id ?? "palestrati"].name} vincono!`}
         </p>
       </motion.div>
 

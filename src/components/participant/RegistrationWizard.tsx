@@ -11,9 +11,9 @@ import { StepBring } from "@/components/participant/steps/StepBring";
 import { registerParticipant } from "@/lib/actions/participant";
 import type { TeamId } from "@/lib/types";
 import { cn } from "@/lib/cn";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
 
 type Step = "intro" | "name" | "team" | "bring";
+const STEP_ORDER: Step[] = ["intro", "name", "team", "bring"];
 
 interface RegistrationWizardProps {
   onRegistered: (participantId: string) => void;
@@ -25,17 +25,14 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
   const [team, setTeam] = useState<TeamId | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const content = useGameContent();
-  // "Cosa porterai?" only for games that ask it.
-  const asksBring = Boolean(content.registration?.bring);
-  const stepOrder: Step[] = asksBring ? ["intro", "name", "team", "bring"] : ["intro", "name", "team"];
 
-  async function register(teamId: TeamId, choice: { bringsFood: boolean; bringsDrink: boolean }) {
+  async function handleBringSubmit(choice: { bringsFood: boolean; bringsDrink: boolean }) {
+    if (!team) return;
     setSubmitting(true);
     setError(null);
     const result = await registerParticipant({
       name,
-      teamId,
+      teamId: team,
       bringsFood: choice.bringsFood,
       bringsDrink: choice.bringsDrink,
     });
@@ -47,15 +44,11 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
     onRegistered(result.participantId);
   }
 
-  function handleBringSubmit(choice: { bringsFood: boolean; bringsDrink: boolean }) {
-    if (team) register(team, choice);
-  }
-
-  const stepIndex = stepOrder.indexOf(step);
+  const stepIndex = STEP_ORDER.indexOf(step);
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {step === "intro" && content.heroImage ? (
+      {step === "intro" ? (
         <HeroImage priority />
       ) : (
         <div className="flex justify-center px-6 pt-10">
@@ -86,12 +79,9 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
               )}
               {step === "team" && (
                 <StepTeam
-                  submitting={submitting}
-                  error={asksBring ? null : error}
                   onNext={(value) => {
                     setTeam(value);
-                    if (asksBring) setStep("bring");
-                    else register(value, { bringsFood: false, bringsDrink: false });
+                    setStep("bring");
                   }}
                 />
               )}
@@ -103,7 +93,7 @@ export function RegistrationWizard({ onRegistered }: RegistrationWizardProps) {
         </div>
 
         <div className="flex gap-2">
-          {stepOrder.map((s, i) => (
+          {STEP_ORDER.map((s, i) => (
             <span
               key={s}
               className={cn(

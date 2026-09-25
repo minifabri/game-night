@@ -17,15 +17,10 @@
   --color-ink: #efe6f8;
   --color-ink-dim: #b6a9cc;
 
-  --color-team-a: #ff6a45;
-  --color-team-a-soft: #ffb495;
-  --color-team-b: #57d3c8;
-  --color-team-b-soft: #a6ece3;
-
-  /* semantic colours, independent of the teams (which each game can recolour) */
-  --color-danger: #ff6a45;
-  --color-danger-soft: #ffb495;
-  --color-ok: #57d3c8;
+  --color-gym: #ff6a45;
+  --color-gym-soft: #ffb495;
+  --color-couch: #57d3c8;
+  --color-couch-soft: #a6ece3;
 }
 
 @theme inline {
@@ -42,13 +37,10 @@
   --color-cream: var(--color-cream);
   --color-ink: var(--color-ink);
   --color-ink-dim: var(--color-ink-dim);
-  --color-team-a: var(--color-team-a);
-  --color-team-a-soft: var(--color-team-a-soft);
-  --color-team-b: var(--color-team-b);
-  --color-team-b-soft: var(--color-team-b-soft);
-  --color-danger: var(--color-danger);
-  --color-danger-soft: var(--color-danger-soft);
-  --color-ok: var(--color-ok);
+  --color-gym: var(--color-gym);
+  --color-gym-soft: var(--color-gym-soft);
+  --color-couch: var(--color-couch);
+  --color-couch-soft: var(--color-couch-soft);
 
   --font-display: var(--font-display);
   --font-numeric: var(--font-numeric);

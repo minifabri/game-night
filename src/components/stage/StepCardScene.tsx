@@ -2,30 +2,26 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { activeSubstep, getQuestionSet, type ShowStep } from "@/lib/game";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
+import { TEAMS } from "@/lib/constants";
+import { QUESTION_SETS, activeSubstep, type ShowStep } from "@/lib/show";
 import { StepTrack } from "@/components/stage/StepTrack";
 import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 import { Scoreboard } from "@/components/stage/Scoreboard";
-import type { ChallengeRow } from "@/hooks/useScores";
-import type { GameState, TeamTotals } from "@/lib/types";
+import type { ChallengeId, GameState, TeamTotals } from "@/lib/types";
 
 interface StepCardSceneProps {
   step: ShowStep;
   gameState: GameState;
   totals: TeamTotals;
-  byChallenge: ChallengeRow[];
+  byChallenge: { challengeId: ChallengeId; palestrati: number; divanisti: number }[];
   variant?: "tv" | "phone";
 }
 
 /** Full-screen card of the step in progress: what's on now and what's next. */
 export function StepCardScene({ step, gameState, totals, byChallenge, variant = "phone" }: StepCardSceneProps) {
   const isTv = variant === "tv";
-  const content = useGameContent();
-  const challenge = content.challenges.find((c) => c.id === step.challengeId);
-  const boardSize = getQuestionSet(content, step.board)?.questions.length ?? 0;
   // Steps with a big body (number board, scoreboard) get a smaller title to fit a 16:9 TV.
-  const compact = boardSize > 0 || Boolean(step.showScoreboard);
+  const compact = step.id === "finalissima" || step.id === "prefinal";
 
   return (
     <motion.div
@@ -56,8 +52,8 @@ export function StepCardScene({ step, gameState, totals, byChallenge, variant = 
         >
           <div className={cn("flex flex-col items-center", isTv ? "gap-3" : "gap-2")}>
             <div className="flex items-center gap-3">
-              {challenge && (
-                <ChallengeIcon icon={challenge.icon} className={cn("text-gold-400", isTv ? "h-9 w-9" : "h-5 w-5")} />
+              {step.challengeId && (
+                <ChallengeIcon id={step.challengeId} className={cn("text-gold-400", isTv ? "h-9 w-9" : "h-5 w-5")} />
               )}
               <p className={cn("font-sans uppercase tracking-[0.5em] text-gold-400", isTv ? "text-2xl" : "text-xs")}>
                 {step.kicker}
@@ -71,10 +67,10 @@ export function StepCardScene({ step, gameState, totals, byChallenge, variant = 
             </p>
           </div>
 
-          {step.showTeams && <TeamsFaceOff isTv={isTv} />}
+          {step.id === "opening" && <TeamsFaceOff isTv={isTv} />}
           {step.substeps && <Substeps step={step} active={activeSubstep(step, gameState.show_substep)} isTv={isTv} />}
-          {boardSize > 0 && <NumberBoard count={boardSize} used={gameState.board_used ?? []} isTv={isTv} />}
-          {step.showScoreboard && (
+          {step.id === "finalissima" && <NumberBoard used={gameState.finalissima_used ?? []} isTv={isTv} />}
+          {step.id === "prefinal" && (
             <Scoreboard totals={totals} byChallenge={byChallenge} variant={variant} />
           )}
         </motion.div>
@@ -84,12 +80,11 @@ export function StepCardScene({ step, gameState, totals, byChallenge, variant = 
 }
 
 function TeamsFaceOff({ isTv }: { isTv: boolean }) {
-  const { teams } = useGameContent();
   return (
     <div className={cn("flex items-baseline font-display font-medium", isTv ? "gap-10 text-7xl" : "gap-4 text-3xl")}>
-      <span className="text-team-a">{teams.a.name}</span>
+      <span className="text-gym">{TEAMS.palestrati.name}</span>
       <span className={cn("font-sans uppercase tracking-[0.3em] text-gold-400", isTv ? "text-2xl" : "text-xs")}>vs</span>
-      <span className="text-team-b">{teams.b.name}</span>
+      <span className="text-couch">{TEAMS.divanisti.name}</span>
     </div>
   );
 }
@@ -157,7 +152,8 @@ function Substeps({ step, active, isTv }: { step: ShowStep; active: number; isTv
   );
 }
 
-function NumberBoard({ count, used, isTv }: { count: number; used: number[]; isTv: boolean }) {
+function NumberBoard({ used, isTv }: { used: number[]; isTv: boolean }) {
+  const count = QUESTION_SETS.finalissima.questions.length;
   return (
     <div className={cn("grid w-full grid-cols-5", isTv ? "max-w-4xl gap-4" : "max-w-sm gap-2")}>
       {Array.from({ length: count }, (_, i) => i + 1).map((n) => {
@@ -176,7 +172,7 @@ function NumberBoard({ count, used, isTv }: { count: number; used: number[]; isT
           >
             {n}
             {taken && (
-              <span aria-hidden className="absolute inset-x-[18%] top-1/2 h-[3px] -rotate-12 rounded-full bg-danger/70" />
+              <span aria-hidden className="absolute inset-x-[18%] top-1/2 h-[3px] -rotate-12 rounded-full bg-gym/70" />
             )}
           </motion.div>
         );

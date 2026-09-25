@@ -127,7 +127,7 @@ function RunningTimer({
         transition={{ duration: 0.5, ease: "easeOut" }}
         className={cn(
           "font-numeric leading-none",
-          urgent ? "text-danger" : "text-cream",
+          urgent ? "text-gym" : "text-cream",
           isTv ? "text-[18rem]" : "text-9xl"
         )}
       >
@@ -151,7 +151,7 @@ function TimeoutCard({ isTv }: { isTv: boolean }) {
       transition={{ duration: 0.4 }}
       className="flex flex-col items-center gap-3"
     >
-      <p className={cn("font-display font-medium tracking-[0.1em] text-danger", isTv ? "text-[8rem]" : "text-6xl")}>
+      <p className={cn("font-display font-medium tracking-[0.1em] text-gym", isTv ? "text-[8rem]" : "text-6xl")}>
         Time out
       </p>
     </motion.div>

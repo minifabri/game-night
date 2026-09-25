@@ -1,6 +1,6 @@
-# Game Night
+# Palestrati vs Divanisti — Game Night
 
-Web app per serate a squadre (la prima: **Palestrati vs Divanisti**), riutilizzabile per giochi diversi — vedi [Giochi](#giochi): registrazione partecipanti da telefono, scoreboard live pensata per la TV, e un pannello admin per condurre la serata (punteggi, timer, estrazioni, reveal finale).
+Web app per una serata a squadre: registrazione partecipanti da telefono, scoreboard live pensata per la TV, e un pannello admin per condurre la serata (punteggi, timer, estrazioni, reveal finale).
 
 Tre esperienze, tre route:
 
@@ -25,12 +25,11 @@ Il punteggio totale di ogni squadra non è mai salvato: è sempre `SUM(points)` 
 ## Schema database
 
 ```
-games          (id, title, content jsonb, created_at)      — un gioco: squadre, prove, scaletta, domande (pubblico)
-game_secrets   (game_id, content jsonb)                    — testi da dire e risposte (SOLO admin, nessuna policy di lettura)
-teams          (id, name, sort_order)                      — i due "posti" 'a' | 'b'; nomi e colori sono nel gioco
-participants   (id, game_id, name, team_id, brings_food, brings_drink, created_at)
-scores         (game_id, challenge_id, team_id, points, updated_at) — PK composita, una riga per gioco×prova×squadra
-game_state     (id=1, game_id, status, campi timer_*, draw_*, final_*, pause_*, announcement_message, show_*, question_*, board_used, updated_at) — riga singola (singleton)
+teams          (id, name, sort_order)                     — 'palestrati' | 'divanisti', seed fisso
+challenges     (id, name, sort_order)                      — le 5 prove, seed fisso
+participants   (id, name, team_id, brings_food, brings_drink, created_at)
+scores         (challenge_id, team_id, points, updated_at) — PK composita, una riga per prova×squadra
+game_state     (id=1, status, campi timer_*, draw_*, final_*, pause_*, announcement_message, show_*, question_*, finalissima_used, updated_at) — riga singola (singleton)
 sounds         (id, name, kind 'music'|'sfx', url, storage_path, created_at) — libreria della console audio
 audio_state    (id=1, music_*, sfx_*, stop_nonce, muted, auto_enabled, auto_map) — comandi audio (singleton)
 ```
@@ -49,9 +48,7 @@ GAME / TIMER ⇄ PAUSED   (pausa manuale dall'admin; un timer in corso viene con
 
 **Messaggio a schermo**: `announcement_message` non è uno stato ma un overlay: quando è valorizzato, TV e telefoni mostrano la scritta sopra qualunque scena (la scena sotto continua, es. un timer). "Togli" lo rimette a `NULL`.
 
-**Giochi**: squadre, prove, scaletta e domande non sono nel codice ma nel gioco attivo (`game_state.game_id` → `games`). Iscritti e punteggi appartengono a un gioco, quindi passando a un altro gioco dal pannello «Giochi» quello di prima resta salvato; «Rigioca da capo» ne crea una copia vuota. I giochi si scrivono come file in `games/` e si caricano con `npm run game:load` — istruzioni in [`games/README.md`](games/README.md). Testi da dire e risposte stanno in `game_secrets`, leggibile solo dal server: il display riceve una risposta solo quando l'admin la svela (`question_answer_text/detail`).
-
-**Scaletta e domande a schermo**: la scaletta della prima serata (Apertura → Quiz → Pubblicità → Triathlon → Coraggio → Classifica pre-finale → Finalissima → Proclamazione) e tutte le domande sono in `games/palestrati-vs-divanisti.ts`. Dal pannello admin «Scaletta della serata» ogni step si avvia con un tap: su TV e telefoni compare la sua scheda a tutto schermo e lo step resta illuminato nella barra degli step, anche tornando al tabellone. Gli step con sotto-prove (round del quiz, prove del triathlon, livelli di coraggio — triathlon e coraggio sono a sorpresa: sul display restano tutti «?» finché non li sveli uno a uno) si scorrono dallo stesso pannello, che mostra anche i testi "da dire". Dal pannello «Domande a schermo» si manda una domanda sul display e si va avanti/indietro: i quadri mostrano **solo l'immagine** (file in `public/games/palestrati-vs-divanisti/arte/`, vedi `LEGGIMI.md` lì), il quiz fa partire da solo 10 secondi, la risposta compare solo con «Mostra risposta». La Finalissima mostra il tabellone dei 20 numeri: il numero scelto va a schermo e si spegne. Tutto vive nelle colonne `show_*` / `question_*` / `board_used` di `game_state` (migration `0007`/`0008`) e viene mostrato solo quando lo stato è `GAME`: timer, estrazione e pausa hanno la precedenza.
+**Scaletta e domande a schermo**: la scaletta della serata (Apertura → Quiz → Pubblicità → Triathlon → Coraggio → Classifica pre-finale → Finalissima → Proclamazione) e tutte le domande sono in `src/lib/show.ts`. Dal pannello admin «Scaletta della serata» ogni step si avvia con un tap: su TV e telefoni compare la sua scheda a tutto schermo e lo step resta illuminato nella barra degli step, anche tornando al tabellone. Gli step con sotto-prove (round del quiz, prove del triathlon, livelli di coraggio — triathlon e coraggio sono a sorpresa: sul display restano tutti «?» finché non li sveli uno a uno) si scorrono dallo stesso pannello, che mostra anche i testi "da dire". Dal pannello «Domande a schermo» si manda una domanda sul display e si va avanti/indietro: i quadri mostrano **solo l'immagine** (file in `public/quiz/arte/`, vedi `LEGGIMI.md` lì), il quiz fa partire da solo 10 secondi, la risposta compare solo con «Mostra risposta». La Finalissima mostra il tabellone dei 20 numeri: il numero scelto va a schermo e si spegne. Tutto vive nelle colonne `show_*` / `question_*` / `finalissima_used` di `game_state` (migration `0007`) e viene mostrato solo quando lo stato è `GAME`: timer, estrazione e pausa hanno la precedenza.
 
 Le migration SQL sono in `supabase/migrations/` (schema, RLS, realtime) — vedi [Setup database](#setup-database).
 
@@ -104,9 +101,7 @@ npm run dev                        # http://localhost:3000
    In alternativa incolla il contenuto dei file, in ordine, nell'SQL Editor della dashboard.
 3. In **Settings → API** copia URL, `anon` key e `service_role` key in `.env.local`.
 
-Le migration fanno anche il seed della prima serata (il gioco `palestrati-vs-divanisti`, attivo) e abilitano la realtime publication sulle tabelle che devono propagare i cambiamenti.
-
-> **Aggiornando da una versione precedente**: la migration `0008` rinomina colonne usate dal codice (squadre → `a`/`b`, `draw_a_*`, `final_a_*`…). Applicala insieme al deploy di questa versione, non prima: la versione vecchia dell'app smette di funzionare appena la migration è applicata. I dati esistenti (iscritti, punti) finiscono nel gioco `palestrati-vs-divanisti`.
+Le migration fanno anche il seed dei dati fissi (le 2 squadre, le 5 prove, i punteggi a 0) e abilitano la realtime publication sulle tabelle che devono propagare i cambiamenti.
 
 ## Comandi di sviluppo
 
@@ -114,10 +109,8 @@ Le migration fanno anche il seed della prima serata (il gioco `palestrati-vs-div
 npm run dev          # server di sviluppo
 npm run lint          # ESLint
 npx tsc --noEmit      # type-check
-npm run seed          # popola partecipanti finti + punteggi casuali nel gioco attivo, utile per provare la UI
-npm run reset-data    # svuota partecipanti e punteggi del gioco attivo, stato → REGISTRATION (gli altri giochi restano)
-npm run game:load -- games/<id>.ts [--activate]   # carica/aggiorna un gioco nel database
-npm run game:sql -- games/<id>.ts                 # stampa l'SQL equivalente, da incollare nell'SQL Editor
+npm run seed          # popola partecipanti finti + punteggi casuali, utile per provare la UI
+npm run reset-data    # svuota partecipanti, azzera punteggi, stato → REGISTRATION
 ```
 
 `seed`/`reset-data` sono script Node standalone (`scripts/`) che usano `SUPABASE_SERVICE_ROLE_KEY` direttamente — utili anche senza passare dall'admin.
@@ -154,7 +147,6 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] "Messaggio a schermo": Mostra / Sostituisci / Togli, anche durante un timer (il timer continua sotto e riappare quando il messaggio viene tolto).
 - [ ] Scaletta: «Inizia: Apertura» dalla sala d'attesa avvia il gioco e mostra la scheda; «Avanti» accende lo step dopo nella barra; «Torna al tabellone» lascia lo step illuminato sopra la scoreboard; triathlon e coraggio partono tutti coperti da «?» e si svelano solo toccando il singolo step/livello.
 - [ ] Domande: un quadro mostra solo l'immagine (nessun file mancante segnalato in admin), countdown 10s con tic e buzzer, «Succ» dall'ultima di Arte passa a Libri, «Mostra risposta», «Togli dal display». Finalissima: tabellone dei 20 numeri, il numero scelto si spegne.
-- [ ] Giochi: nel pannello «Giochi» il gioco attivo è «In gioco»; «Rigioca da capo» porta TV e telefoni a una partita vuota (i telefoni tornano all'iscrizione), «Attiva» sulla partita di prima ritrova iscritti e punti.
 - [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
 - [ ] Pareggio: azzera i punteggi delle due squadre e rilancia "Termina gioco" per vedere la schermata PAREGGIO dedicata.
 - [ ] "Metti in pausa" (con e senza messaggio) dalla scoreboard e durante un timer: tutti gli schermi mostrano PAUSA; "Riprendi il gioco" torna dove si era e il timer riparte dal tempo rimasto.
@@ -177,17 +169,13 @@ src/
     stage/                # GameStage + tutte le scene pubbliche (Scoreboard, Timer, Draw, FinalReveal…)
     admin/                # pannelli del pannello di regia
     audio/                # AudioDirector (riproduzione + effetti automatici), StageAudio
-  hooks/                  # useGameState / useGame / useParticipants / useScores / useAudioState / useSounds (realtime) + useGameSecrets, useTick
-    game/                 # ActiveGameProvider: gioco attivo + colori delle squadre per ogni schermata
+  hooks/                  # useGameState / useParticipants / useScores / useAudioState / useSounds (realtime) + useTick
   lib/
     actions/              # Server Actions (participant.ts, admin.ts, audio.ts)
     audio/                # catalogo suoni/eventi, sintetizzatore Web Audio, engine di riproduzione
     supabase/              # client browser (anon) e admin (service role)
-    game.ts, game-pack.ts # tipi e helper di un gioco; formato + validazione dei file in games/
-    active-game.ts        # (server) gioco attivo e suoi segreti
     auth.ts, constants.ts, types.ts, format.ts, cn.ts
-scripts/                  # seed.ts, reset.ts, load-game.ts, game-sql.ts (CLI, service role key)
-supabase/migrations/      # schema, RLS, realtime publication, pausa, audio, estrazione per squadra + messaggio a schermo, scaletta + domande, giochi
-games/                    # un file per gioco (squadre, prove, scaletta, domande) — vedi games/README.md
-public/games/<id>/        # immagini di ogni gioco (poster, quadri del quiz…)
+scripts/                  # seed.ts, reset.ts (CLI, service role key)
+supabase/migrations/      # schema, RLS, realtime publication, pausa, audio, estrazione per squadra + messaggio a schermo, scaletta + domande
+public/quiz/arte/         # le immagini dei quadri del quiz (da aggiungere, vedi LEGGIMI.md)
 ```

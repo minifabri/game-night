@@ -139,11 +139,11 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
     const prev = prevTotals.current;
     prevTotals.current = totals;
     if (!prev) return;
-    const scored = totals.a > prev.a || totals.b > prev.b;
+    const scored = totals.palestrati > prev.palestrati || totals.divanisti > prev.divanisti;
     const live = gameState.status === "GAME" || gameState.status === "TIMER" || gameState.status === "PAUSED";
     if (scored && live) fire("point");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totals.a, totals.b]);
+  }, [totals.palestrati, totals.divanisti]);
 
   if (!showUnlock || unlocked) return null;
 

@@ -1,44 +1,41 @@
-import type { TeamId } from "./types";
+import type { Challenge, ChallengeId, Team, TeamId } from "./types";
 
-/** The two team slots; names and colours come from the active game. */
-export const TEAM_ORDER: TeamId[] = ["a", "b"];
-
-/**
- * game_state fields rewound when a game (re)starts: timer, draw, final
- * reveal, pause, message, running order and question. Doesn't touch
- * `status` or `game_id`.
- */
-export const LIVE_STATE_RESET = {
-  timer_label: null,
-  timer_duration_ms: null,
-  timer_phase: "idle",
-  timer_countdown_ends_at: null,
-  timer_ends_at: null,
-  timer_remaining_ms: null,
-  draw_a_participant_id: null,
-  draw_b_participant_id: null,
-  draw_started_at: null,
-  draw_team: null,
-  final_started_at: null,
-  final_a_score: null,
-  final_b_score: null,
-  final_winner_team_id: null,
-  final_is_draw: false,
-  pause_previous_status: null,
-  pause_message: null,
-  pause_resumes_timer: false,
-  announcement_message: null,
-  show_step: null,
-  show_substep: null,
-  show_card: false,
-  question_set: null,
-  question_index: null,
-  question_answer_visible: false,
-  question_answer_text: null,
-  question_answer_detail: null,
-  question_timer_ends_at: null,
-  board_used: [],
+export const TEAMS: Record<TeamId, Team> = {
+  palestrati: { id: "palestrati", name: "Palestrati", sort_order: 0 },
+  divanisti: { id: "divanisti", name: "Divanisti", sort_order: 1 },
 };
+
+export const TEAM_ORDER: TeamId[] = ["palestrati", "divanisti"];
+
+export const BRING_IDEAS: { food: string[]; drink: string[] } = {
+  food: [
+    "Hummus e verdure crude da pucciare",
+    "Chips di mais o legumi con guacamole",
+    "Olive, frutta secca, taralli senza glutine",
+    "Insalata di quinoa e verdure, legumi",
+    "Bruschette senza glutine con pomodorini",
+    "Frutta fresca a fette",
+    "Frittata di ceci (farinata)",
+    "Tofu marinato a cubetti",
+  ],
+  drink: ["Spritz", "Birra", "Vino", "Coca zero"],
+};
+
+export const CHALLENGES: Record<ChallengeId, Challenge> = {
+  quiz: { id: "quiz", name: "Quiz culturale", sort_order: 0 },
+  creativity: { id: "creativity", name: "Prova di creatività", sort_order: 1 },
+  physical: { id: "physical", name: "Prova fisica", sort_order: 2 },
+  courage: { id: "courage", name: "Prova di coraggio", sort_order: 3 },
+  finalissima: { id: "finalissima", name: "La Finalissima", sort_order: 4 },
+};
+
+export const CHALLENGE_ORDER: ChallengeId[] = [
+  "quiz",
+  "creativity",
+  "physical",
+  "courage",
+  "finalissima",
+];
 
 export interface TimerPreset {
   label: string;

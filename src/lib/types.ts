@@ -1,11 +1,11 @@
-/**
- * Every game has two teams; their names, colours and everything else come
- * from the active game's content (see lib/game.ts). "a"/"b" are just slots.
- */
-export type TeamId = "a" | "b";
+export type TeamId = "palestrati" | "divanisti";
 
-/** A challenge id from the active game's content. */
-export type ChallengeId = string;
+export type ChallengeId =
+  | "quiz"
+  | "creativity"
+  | "physical"
+  | "courage"
+  | "finalissima";
 
 export type GameStatus =
   | "REGISTRATION"
@@ -18,9 +18,20 @@ export type GameStatus =
 
 export type TimerPhase = "idle" | "active" | "paused";
 
+export interface Team {
+  id: TeamId;
+  name: string;
+  sort_order: number;
+}
+
+export interface Challenge {
+  id: ChallengeId;
+  name: string;
+  sort_order: number;
+}
+
 export interface Participant {
   id: string;
-  game_id: string;
   name: string;
   team_id: TeamId;
   brings_food: boolean;
@@ -29,7 +40,6 @@ export interface Participant {
 }
 
 export interface Score {
-  game_id: string;
   challenge_id: ChallengeId;
   team_id: TeamId;
   points: number;
@@ -38,8 +48,6 @@ export interface Score {
 
 export interface GameState {
   id: 1;
-  /** The active game (games.id): content, participants and scores all hang off it. */
-  game_id: string;
   status: GameStatus;
 
   timer_label: string | null;
@@ -50,16 +58,16 @@ export interface GameState {
   timer_remaining_ms: number | null;
   timer_nonce: number;
 
-  draw_a_participant_id: string | null;
-  draw_b_participant_id: string | null;
+  draw_gym_participant_id: string | null;
+  draw_couch_participant_id: string | null;
   draw_started_at: string | null;
   draw_nonce: number;
   /** Team being drawn in the current DRAW run; null for a draw of both teams at once. */
   draw_team: TeamId | null;
 
   final_started_at: string | null;
-  final_a_score: number | null;
-  final_b_score: number | null;
+  final_gym_score: number | null;
+  final_couch_score: number | null;
   final_winner_team_id: TeamId | null;
   final_is_draw: boolean;
   final_nonce: number;
@@ -71,31 +79,28 @@ export interface GameState {
   /** Text overlaid on every screen (instructions, announcements); null when hidden. */
   announcement_message: string | null;
 
-  /** Running order (step ids from the game content). */
-  show_step: string | null;
-  show_substep: number | null;
+  /** Scaletta (see lib/show.ts). Optional: undefined until migration 0007 is applied. */
+  show_step?: string | null;
+  show_substep?: number | null;
   /** Full-screen card of the current step in place of the scoreboard. */
-  show_card: boolean;
-  show_nonce: number;
+  show_card?: boolean;
+  show_nonce?: number;
 
-  /** Question on screen: set id + index into the game content; null when none. */
-  question_set: string | null;
-  question_index: number | null;
-  question_answer_visible: boolean;
-  /** The revealed answer, copied from the (admin-only) game secrets on reveal. */
-  question_answer_text: string | null;
-  question_answer_detail: string | null;
-  question_timer_ends_at: string | null;
-  question_nonce: number;
-  /** Numbers (1-based) already picked on a pick-a-number board. */
-  board_used: number[];
+  /** Question on screen: set + index into QUESTION_SETS; null when none. */
+  question_set?: string | null;
+  question_index?: number | null;
+  question_answer_visible?: boolean;
+  question_timer_ends_at?: string | null;
+  question_nonce?: number;
+  /** Finalissima numbers (1-20) already picked. */
+  finalissima_used?: number[];
 
   updated_at: string;
 }
 
 export interface TeamTotals {
-  a: number;
-  b: number;
+  palestrati: number;
+  divanisti: number;
 }
 
 export type SoundKind = "music" | "sfx";

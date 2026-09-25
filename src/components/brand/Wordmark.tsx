@@ -1,7 +1,4 @@
-"use client";
-
 import { cn } from "@/lib/cn";
-import { useOptionalGameContent } from "@/components/game/ActiveGameProvider";
 
 interface WordmarkProps {
   size?: "sm" | "md" | "lg" | "xl";
@@ -31,13 +28,9 @@ const sizes = {
   },
 };
 
-/**
- * The persistent "TEAM A VS TEAM B / SUBTITLE" identity mark of the active
- * game; just "Game Night" where no game is loaded (login, loading screens).
- */
+/** The persistent "PALESTRATI VS DIVANISTI / GAME NIGHT" identity mark. */
 export function Wordmark({ size = "md", className }: WordmarkProps) {
   const s = sizes[size];
-  const content = useOptionalGameContent();
   return (
     <div className={cn("flex flex-col items-center text-center", s.gap, className)}>
       <p
@@ -46,17 +39,9 @@ export function Wordmark({ size = "md", className }: WordmarkProps) {
           s.title
         )}
       >
-        {content ? (
-          <>
-            {content.teams.a.name} <span className="text-gold-400 italic">vs</span> {content.teams.b.name}
-          </>
-        ) : (
-          "Game Night"
-        )}
+        Palestrati <span className="text-gold-400 italic">vs</span> Divanisti
       </p>
-      {content?.subtitle && (
-        <p className={cn("font-sans uppercase text-gold-400/90", s.sub)}>{content.subtitle}</p>
-      )}
+      <p className={cn("font-sans uppercase text-gold-400/90", s.sub)}>Game Night</p>
     </div>
   );
 }

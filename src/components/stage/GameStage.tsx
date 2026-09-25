@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
-import { useActiveGame } from "@/components/game/ActiveGameProvider";
+import { useGameState } from "@/hooks/useGameState";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useScores } from "@/hooks/useScores";
 import { StatusScreen } from "@/components/ui/StatusScreen";
@@ -17,7 +17,7 @@ import { StageAudio } from "@/components/audio/StageAudio";
 import { StepCardScene } from "@/components/stage/StepCardScene";
 import { QuestionScene } from "@/components/stage/QuestionScene";
 import { StepTrack } from "@/components/stage/StepTrack";
-import { getQuestion, getStep } from "@/lib/game";
+import { getQuestion, getShowStep } from "@/lib/show";
 
 interface GameStageProps {
   variant?: "tv" | "phone";
@@ -27,28 +27,24 @@ interface GameStageProps {
   withAudio?: boolean;
 }
 
-const NO_CHALLENGES: never[] = [];
-
 export function GameStage({ variant = "phone", isCanonical = false, withAudio = false }: GameStageProps) {
-  const { gameState, game, loading: gLoading, error: gError } = useActiveGame();
-  const gameId = game?.id ?? null;
-  const { participants, loading: pLoading } = useParticipants(gameId);
-  const { totals, byChallenge, loading: sLoading } = useScores(gameId, game?.content.challenges ?? NO_CHALLENGES);
+  const { gameState, loading: gsLoading, error: gsError } = useGameState();
+  const { participants, loading: pLoading } = useParticipants();
+  const { totals, byChallenge, loading: sLoading } = useScores();
 
-  if (gError) {
+  if (gsError) {
     return <StatusScreen kind="error" message="Impossibile contattare il game server." />;
   }
 
-  if (gLoading || pLoading || sLoading || !gameState || !game) {
+  if (gsLoading || pLoading || sLoading || !gameState) {
     return <StatusScreen kind="loading" message="Accendiamo le luci…" />;
   }
-  const content = game.content;
 
   // On the scoreboard status the running order can take over the screen: a
   // question first, else the current step's card, else the scoreboard (with
   // the step track on top once the show has started).
-  const step = getStep(content, gameState.show_step);
-  const hasQuestion = getQuestion(content, gameState.question_set, gameState.question_index) !== null;
+  const step = getShowStep(gameState.show_step);
+  const hasQuestion = getQuestion(gameState.question_set, gameState.question_index) !== null;
   const gameScene = hasQuestion ? "question" : step && gameState.show_card ? "step" : "scoreboard";
 
   return (

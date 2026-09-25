@@ -9,15 +9,16 @@ import {
   verifyAdminPassword,
 } from "@/lib/auth";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { loadActiveGame } from "@/lib/active-game";
 import {
   DRAW_SHUFFLE_MS,
   DRAW_TOTAL_HOLD_MS,
   FINAL_TOTAL_MS,
-  LIVE_STATE_RESET,
+  TEAM_ORDER,
+  TEAMS,
   TIMER_STARTUP_COUNTDOWN_MS,
   TIMER_TIMEOUT_HOLD_MS,
 } from "@/lib/constants";
+import { SHOW_RESET_PATCH } from "@/lib/show";
 import type { ChallengeId, TeamId } from "@/lib/types";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -162,8 +163,8 @@ export async function resumeGame(): Promise<ActionResult> {
 }
 
 const setScoreSchema = z.object({
-  challengeId: z.string().min(1).max(60),
-  teamId: z.enum(["a", "b"]),
+  challengeId: z.enum(["quiz", "creativity", "physical", "courage", "finalissima"]),
+  teamId: z.enum(["palestrati", "divanisti"]),
   points: z.number().int().min(0).max(999),
 });
 
@@ -178,23 +179,12 @@ export async function setScore(input: {
   const parsed = setScoreSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Punteggio non valido." };
 
-  const game = await loadActiveGame();
-  if (!game.ok) return game;
-  if (!game.content.challenges.some((c) => c.id === parsed.data.challengeId)) {
-    return { ok: false, error: "Prova non valida." };
-  }
-
-  // Rows are created on the first score of each challenge × team of a game.
   const supabase = getSupabaseAdminClient();
-  const { error } = await supabase.from("scores").upsert(
-    {
-      game_id: game.gameId,
-      challenge_id: parsed.data.challengeId,
-      team_id: parsed.data.teamId,
-      points: parsed.data.points,
-    },
-    { onConflict: "game_id,challenge_id,team_id" }
-  );
+  const { error } = await supabase
+    .from("scores")
+    .update({ points: parsed.data.points })
+    .eq("challenge_id", parsed.data.challengeId)
+    .eq("team_id", parsed.data.teamId);
 
   if (error) return { ok: false, error: "Impossibile salvare il punteggio." };
   return { ok: true };
@@ -406,7 +396,7 @@ export async function finishTimer(): Promise<ActionResult> {
 // Random draw
 // ---------------------------------------------------------------------------
 
-const drawSchema = z.object({ team: z.enum(["a", "b"]) });
+const drawSchema = z.object({ team: z.enum(["palestrati", "divanisti"]) });
 
 /**
  * Draws a random participant of one team, independently of the other team:
@@ -422,20 +412,16 @@ export async function drawParticipant(input: { team: TeamId }): Promise<ActionRe
   if (!parsed.success) return { ok: false, error: "Squadra non valida." };
   const team = parsed.data.team;
 
-  const game = await loadActiveGame();
-  if (!game.ok) return game;
-
   const supabase = getSupabaseAdminClient();
   const { data: participants, error: fetchError } = await supabase
     .from("participants")
     .select("id")
-    .eq("game_id", game.gameId)
     .eq("team_id", team);
 
   if (fetchError) return { ok: false, error: "Impossibile leggere i partecipanti." };
   const pool = (participants ?? []).map((p) => p.id as string);
   if (pool.length === 0) {
-    return { ok: false, error: `Nessun partecipante tra i ${game.content.teams[team].name}.` };
+    return { ok: false, error: `Nessun partecipante tra i ${TEAMS[team].name}.` };
   }
 
   const pick = pool[Math.floor(Math.random() * pool.length)];
@@ -454,7 +440,7 @@ export async function drawParticipant(input: { team: TeamId }): Promise<ActionRe
     return { ok: false, error: "C'è già un'estrazione in corso." };
   }
 
-  const ownColumn = team === "a" ? "draw_a_participant_id" : "draw_b_participant_id";
+  const ownColumn = team === "palestrati" ? "draw_gym_participant_id" : "draw_couch_participant_id";
 
   const { error } = await supabase
     .from("game_state")
@@ -551,26 +537,24 @@ export async function finishGame(): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
 
-  const game = await loadActiveGame();
-  if (!game.ok) return game;
-
   const supabase = getSupabaseAdminClient();
   const { data: scores, error: fetchError } = await supabase
     .from("scores")
-    .select("challenge_id, team_id, points")
-    .eq("game_id", game.gameId);
+    .select("team_id, points");
 
   if (fetchError) return { ok: false, error: "Impossibile leggere i punteggi." };
 
-  // Same as the scoreboard: only the game's current challenges count.
-  const challengeIds = new Set(game.content.challenges.map((c) => c.id));
-  const totals: Record<TeamId, number> = { a: 0, b: 0 };
+  const totals: Record<TeamId, number> = { palestrati: 0, divanisti: 0 };
   for (const s of scores ?? []) {
-    if (challengeIds.has(s.challenge_id as string)) totals[s.team_id as TeamId] += s.points as number;
+    totals[s.team_id as TeamId] += s.points as number;
   }
 
-  const isDraw = totals.a === totals.b;
-  const winner: TeamId | null = isDraw ? null : totals.a > totals.b ? "a" : "b";
+  const isDraw = totals.palestrati === totals.divanisti;
+  const winner: TeamId | null = isDraw
+    ? null
+    : totals.palestrati > totals.divanisti
+      ? "palestrati"
+      : "divanisti";
 
   const { data: current } = await supabase
     .from("game_state")
@@ -583,8 +567,8 @@ export async function finishGame(): Promise<ActionResult> {
     .update({
       status: "FINAL_REVEAL",
       final_started_at: new Date().toISOString(),
-      final_a_score: totals.a,
-      final_b_score: totals.b,
+      final_gym_score: totals.palestrati,
+      final_couch_score: totals.divanisti,
       final_winner_team_id: winner,
       final_is_draw: isDraw,
       final_nonce: ((current?.final_nonce as number) ?? 0) + 1,
@@ -614,29 +598,50 @@ export async function settleFinalReveal(): Promise<ActionResult> {
 }
 
 /**
- * Zeroes every score of the active game and rewinds the game phase so a new
- * simulation can start, without touching its participants.
+ * Zeroes every score and rewinds the game phase (timer/draw/final fields) so
+ * a new simulation can start, without touching `participants` — registered
+ * players and teams are left exactly as they are.
  */
 export async function resetScoresKeepParticipants(): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
 
-  const game = await loadActiveGame();
-  if (!game.ok) return game;
-
   const supabase = getSupabaseAdminClient();
   const { error: scoresError } = await supabase
     .from("scores")
     .update({ points: 0 })
-    .eq("game_id", game.gameId);
+    .in("team_id", TEAM_ORDER);
   if (scoresError) return { ok: false, error: "Impossibile azzerare i punteggi." };
 
   const { error } = await supabase
     .from("game_state")
-    .update({ ...LIVE_STATE_RESET, status: "GAME" })
+    .update({
+      status: "GAME",
+      timer_label: null,
+      timer_duration_ms: null,
+      timer_phase: "idle",
+      timer_countdown_ends_at: null,
+      timer_ends_at: null,
+      timer_remaining_ms: null,
+      draw_gym_participant_id: null,
+      draw_couch_participant_id: null,
+      draw_started_at: null,
+      draw_team: null,
+      final_started_at: null,
+      final_gym_score: null,
+      final_couch_score: null,
+      final_winner_team_id: null,
+      final_is_draw: false,
+      pause_previous_status: null,
+      pause_message: null,
+      pause_resumes_timer: false,
+      announcement_message: null,
+    })
     .eq("id", 1);
 
   if (error) return { ok: false, error: "Reset punteggi non riuscito." };
+  // Best effort: these columns only exist once migration 0007 is applied.
+  await supabase.from("game_state").update(SHOW_RESET_PATCH).eq("id", 1);
   return { ok: true };
 }
 
@@ -644,7 +649,6 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
 // Dev-only reset
 // ---------------------------------------------------------------------------
 
-/** Dev mode: wipes the active game's participants and scores, back to registration. */
 export async function resetGameData(): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
@@ -652,18 +656,36 @@ export async function resetGameData(): Promise<ActionResult> {
     return { ok: false, error: "Reset disponibile solo in dev mode." };
   }
 
-  const game = await loadActiveGame();
-  if (!game.ok) return game;
-
   const supabase = getSupabaseAdminClient();
-  // game_state points at the drawn participants: clear it before deleting them.
+  await supabase.from("participants").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await supabase.from("scores").update({ points: 0 }).in("team_id", TEAM_ORDER);
   const { error } = await supabase
     .from("game_state")
-    .update({ ...LIVE_STATE_RESET, status: "REGISTRATION" })
+    .update({
+      status: "REGISTRATION",
+      timer_label: null,
+      timer_duration_ms: null,
+      timer_phase: "idle",
+      timer_countdown_ends_at: null,
+      timer_ends_at: null,
+      timer_remaining_ms: null,
+      draw_gym_participant_id: null,
+      draw_couch_participant_id: null,
+      draw_started_at: null,
+      draw_team: null,
+      final_started_at: null,
+      final_gym_score: null,
+      final_couch_score: null,
+      final_winner_team_id: null,
+      final_is_draw: false,
+      pause_previous_status: null,
+      pause_message: null,
+      pause_resumes_timer: false,
+      announcement_message: null,
+    })
     .eq("id", 1);
-  if (error) return { ok: false, error: "Reset non riuscito." };
 
-  await supabase.from("participants").delete().eq("game_id", game.gameId);
-  await supabase.from("scores").delete().eq("game_id", game.gameId);
+  if (error) return { ok: false, error: "Reset non riuscito." };
+  await supabase.from("game_state").update(SHOW_RESET_PATCH).eq("id", 1);
   return { ok: true };
 }

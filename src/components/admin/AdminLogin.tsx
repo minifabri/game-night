@@ -45,7 +45,7 @@ export function AdminLogin() {
           placeholder="Password"
           className="w-full rounded-full border border-ink-dim/30 bg-plum-900/50 px-6 py-3 text-center font-sans text-cream outline-none focus:border-gold-400"
         />
-        {error && <p className="text-center font-sans text-sm text-danger">{error}</p>}
+        {error && <p className="text-center font-sans text-sm text-gym">{error}</p>}
         <Button type="submit" size="lg" disabled={!password || pending} className="self-center">
           {pending ? "…" : "Entra"}
         </Button>

@@ -6,13 +6,11 @@ import { drawParticipant, endDraw } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
 import { Button } from "@/components/ui/Button";
 import type { GameState, Participant, TeamId } from "@/lib/types";
-import { useGameContent } from "@/components/game/ActiveGameProvider";
 
 export function DrawControl({ gameState, participants }: { gameState: GameState; participants: Participant[] }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { teams } = useGameContent();
   const drawing = gameState.status === "DRAW";
   const blocked = pending || gameState.status === "PAUSED";
 
@@ -39,23 +37,23 @@ export function DrawControl({ gameState, participants }: { gameState: GameState;
 
       <div className="grid grid-cols-2 gap-3">
         <TeamDraw
-          label={`Ultimo ${teams.a.member}`}
-          name={nameOf(gameState.draw_a_participant_id)}
-          className="text-team-a"
-          live={drawing && gameState.draw_team === "a"}
+          label="Ultimo Palestrato"
+          name={nameOf(gameState.draw_gym_participant_id)}
+          className="text-gym"
+          live={drawing && gameState.draw_team === "palestrati"}
         >
-          <Button size="md" variant="team-a" disabled={blocked} onClick={() => draw("a")}>
-            Estrai {teams.a.member}
+          <Button size="md" variant="team-gym" disabled={blocked} onClick={() => draw("palestrati")}>
+            Estrai Palestrato
           </Button>
         </TeamDraw>
         <TeamDraw
-          label={`Ultimo ${teams.b.member}`}
-          name={nameOf(gameState.draw_b_participant_id)}
-          className="text-team-b"
-          live={drawing && gameState.draw_team === "b"}
+          label="Ultimo Divanista"
+          name={nameOf(gameState.draw_couch_participant_id)}
+          className="text-couch"
+          live={drawing && gameState.draw_team === "divanisti"}
         >
-          <Button size="md" variant="team-b" disabled={blocked} onClick={() => draw("b")}>
-            Estrai {teams.b.member}
+          <Button size="md" variant="team-couch" disabled={blocked} onClick={() => draw("divanisti")}>
+            Estrai Divanista
           </Button>
         </TeamDraw>
       </div>
@@ -64,7 +62,7 @@ export function DrawControl({ gameState, participants }: { gameState: GameState;
         Torna al tabellone
       </Button>
 
-      {error && <p className="mt-3 text-center font-sans text-sm text-danger">{error}</p>}
+      {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
     </Panel>
   );
 }
