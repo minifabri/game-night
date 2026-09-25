@@ -1,18 +1,23 @@
+"use client";
+
 import Image from "next/image";
 import { cn } from "@/lib/cn";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 
 interface HeroImageProps {
   className?: string;
   priority?: boolean;
 }
 
-/** Top crop of the event poster — title, dumbbells, couch — fading into the app's dark background. */
+/** Top crop of the active game's poster, fading into the app's dark background. */
 export function HeroImage({ className, priority }: HeroImageProps) {
+  const content = useGameContent();
+  if (!content.heroImage) return null;
   return (
     <div className={cn("relative w-full aspect-[1024/450] overflow-hidden", className)}>
       <Image
-        src="/hero-poster.jpg"
-        alt="Palestrati vs Divanisti — Game Night"
+        src={content.heroImage}
+        alt={`${content.teams.a.name} vs ${content.teams.b.name}`}
         fill
         priority={priority}
         className="object-cover object-top"

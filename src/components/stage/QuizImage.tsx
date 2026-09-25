@@ -29,7 +29,7 @@ export function QuizImage({ src, className, small }: QuizImageProps) {
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-xl border border-dashed border-gym/50 bg-gym/5 text-center font-sans text-gym-soft",
+          "flex items-center justify-center rounded-xl border border-dashed border-danger/50 bg-danger/5 text-center font-sans text-danger-soft",
           // the image's own classes only fit the tiny thumbnail frame
           small ? cn("h-full w-full p-1 text-[0.55rem]", className) : "aspect-[4/3] w-[60vw] max-w-3xl p-6 text-lg"
         )}

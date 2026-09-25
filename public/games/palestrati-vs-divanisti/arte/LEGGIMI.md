@@ -1,6 +1,6 @@
 # Quadri del quiz (round Arte)
 
-Metti qui le immagini dei 10 quadri, con **esattamente** questi nomi (jpg):
+Metti qui (`public/games/palestrati-vs-divanisti/arte/`) le immagini dei 10 quadri, con **esattamente** questi nomi (jpg):
 
 | # | File | Opera — risposta |
 |---|------|------------------|
@@ -17,4 +17,4 @@ Metti qui le immagini dei 10 quadri, con **esattamente** questi nomi (jpg):
 
 Qualsiasi dimensione va bene (sul display vengono adattate allo schermo); ~1600px sul lato lungo è più che sufficiente.
 Se un file manca, l'admin mostra «manca» sulla miniatura e il display scrive quale file non trova.
-Per cambiare nomi o opere: `src/lib/show.ts` (`QUESTION_SETS.arte`).
+Per cambiare nomi o opere: `games/palestrati-vs-divanisti.ts` (set `arte`), poi `npm run game:load -- games/palestrati-vs-divanisti.ts`.

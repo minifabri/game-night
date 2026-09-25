@@ -24,8 +24,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Palestrati vs Divanisti — Game Night",
-  description: "L'app ufficiale della serata Palestrati vs Divanisti.",
+  title: "Game Night",
+  description: "L'app della serata: iscrizioni, tabellone e regia.",
 };
 
 export const viewport: Viewport = {

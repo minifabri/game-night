@@ -3,12 +3,23 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { TEAM_ORDER, TEAMS } from "@/lib/constants";
+import { TEAM_ORDER } from "@/lib/constants";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import type { TeamId } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 
-export function StepTeam({ onNext }: { onNext: (team: TeamId) => void }) {
+export function StepTeam({
+  onNext,
+  submitting = false,
+  error = null,
+}: {
+  onNext: (team: TeamId) => void;
+  /** Set when this is the last step (the game doesn't ask what to bring). */
+  submitting?: boolean;
+  error?: string | null;
+}) {
   const [selected, setSelected] = useState<TeamId | null>(null);
+  const { teams } = useGameContent();
 
   return (
     <div className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
@@ -33,33 +44,35 @@ export function StepTeam({ onNext }: { onNext: (team: TeamId) => void }) {
             onClick={() => setSelected(teamId)}
             className={cn(
               "flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-3xl border-2 p-4 transition-colors",
-              teamId === "palestrati"
-                ? "border-gym/40 bg-gym/5"
-                : "border-couch/40 bg-couch/5",
+              teamId === "a"
+                ? "border-team-a/40 bg-team-a/5"
+                : "border-team-b/40 bg-team-b/5",
               selected === teamId &&
-                (teamId === "palestrati"
-                  ? "border-gym bg-gym/15 shadow-[0_0_40px_rgba(255,106,69,0.25)]"
-                  : "border-couch bg-couch/15 shadow-[0_0_40px_rgba(87,211,200,0.25)]")
+                (teamId === "a"
+                  ? "border-team-a bg-team-a/15 shadow-[0_0_40px_color-mix(in_srgb,var(--color-team-a)_25%,transparent)]"
+                  : "border-team-b bg-team-b/15 shadow-[0_0_40px_color-mix(in_srgb,var(--color-team-b)_25%,transparent)]")
             )}
           >
             <span
               className={cn(
                 "font-display text-xl font-medium leading-tight sm:text-2xl",
-                teamId === "palestrati" ? "text-gym" : "text-couch"
+                teamId === "a" ? "text-team-a" : "text-team-b"
               )}
             >
-              {TEAMS[teamId].name}
+              {teams[teamId].name}
             </span>
           </motion.button>
         ))}
       </div>
 
+      {error && <p className="font-sans text-sm text-danger">{error}</p>}
+
       <motion.div
         animate={{ opacity: selected ? 1 : 0.3 }}
         transition={{ duration: 0.3 }}
       >
-        <Button size="lg" disabled={!selected} onClick={() => selected && onNext(selected)}>
-          Continua
+        <Button size="lg" disabled={!selected || submitting} onClick={() => selected && onNext(selected)}>
+          {submitting ? "Un attimo…" : "Continua"}
         </Button>
       </motion.div>
     </div>
