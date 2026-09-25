@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { useTick } from "@/hooks/useTick";
-import { DRAW_SHUFFLE_MS, DRAW_TOTAL_HOLD_MS, TEAMS } from "@/lib/constants";
+import { DRAW_SHUFFLE_MS, DRAW_TOTAL_HOLD_MS } from "@/lib/constants";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import { finishDraw } from "@/lib/actions/admin";
 import type { GameState, Participant } from "@/lib/types";
 
@@ -25,9 +26,10 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
   const elapsed = now - startedAt;
   const revealed = elapsed >= DRAW_SHUFFLE_MS;
 
-  const team = gameState.draw_team ?? "palestrati";
-  const isGym = team === "palestrati";
-  const pickedId = isGym ? gameState.draw_gym_participant_id : gameState.draw_couch_participant_id;
+  const { teams } = useGameContent();
+  const team = gameState.draw_team ?? "a";
+  const isA = team === "a";
+  const pickedId = isA ? gameState.draw_a_participant_id : gameState.draw_b_participant_id;
 
   const pool = participants.filter((p) => p.team_id === team).map((p) => p.name);
   const finalName = participants.find((p) => p.id === pickedId)?.name ?? "—";
@@ -46,11 +48,11 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
       <p
         className={cn(
           "font-sans uppercase tracking-[0.5em]",
-          isGym ? "text-gym" : "text-couch",
+          isA ? "text-team-a" : "text-team-b",
           isTv ? "text-3xl" : "text-sm"
         )}
       >
-        {TEAMS[team].name}
+        {teams[team].name}
       </p>
 
       <p className={cn("font-sans uppercase tracking-[0.4em] text-gold-400", isTv ? "text-xl" : "text-xs")}>
@@ -67,9 +69,9 @@ export function DrawScene({ gameState, participants, isCanonical, variant = "pho
           className={cn(
             "font-display font-medium leading-tight text-cream",
             revealed &&
-              (isGym
-                ? "drop-shadow-[0_0_32px_rgba(255,106,69,0.5)]"
-                : "drop-shadow-[0_0_32px_rgba(87,211,200,0.5)]"),
+              (isA
+                ? "drop-shadow-[0_0_32px_color-mix(in_srgb,var(--color-team-a)_50%,transparent)]"
+                : "drop-shadow-[0_0_32px_color-mix(in_srgb,var(--color-team-b)_50%,transparent)]"),
             isTv ? "text-9xl" : "text-5xl"
           )}
         >

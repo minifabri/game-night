@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node --env-file=.env.local --experimental-strip-types scripts/seed.ts",
-    "reset-data": "node --env-file=.env.local --experimental-strip-types scripts/reset.ts"
+    "reset-data": "node --env-file=.env.local --experimental-strip-types scripts/reset.ts",
+    "game:load": "node --env-file=.env.local --experimental-strip-types scripts/load-game.ts",
+    "game:sql": "node --experimental-strip-types scripts/game-sql.ts"
   },
   "dependencies": {
     "next": "15.5.25",

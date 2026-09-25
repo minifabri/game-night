@@ -5,14 +5,15 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 
 interface ParticlesProps {
-  color: "gold" | "gym" | "couch";
+  /** Gold, or a team slot's colour. */
+  color: "gold" | "a" | "b";
   count?: number;
 }
 
 const colorClass: Record<ParticlesProps["color"], string> = {
   gold: "bg-gold-300",
-  gym: "bg-gym-soft",
-  couch: "bg-couch-soft",
+  a: "bg-team-a-soft",
+  b: "bg-team-b-soft",
 };
 
 /** A handful of soft drifting dots — restrained, not a confetti cannon. */

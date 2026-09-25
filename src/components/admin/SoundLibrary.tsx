@@ -172,7 +172,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
                   type="button"
                   disabled={pending}
                   onClick={() => remove(s.id)}
-                  className="font-sans text-xs text-gym"
+                  className="font-sans text-xs text-danger"
                 >
                   Conferma
                 </button>
@@ -180,7 +180,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(s.id)}
-                  className="font-sans text-xs text-ink-dim hover:text-gym"
+                  className="font-sans text-xs text-ink-dim hover:text-danger"
                 >
                   Elimina
                 </button>
@@ -208,7 +208,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
                 <div className="min-w-0">
                   <p className="font-sans text-sm text-cream">
                     {entry.name}
-                    {inLibrary && <span className="ml-2 text-xs text-couch">✓ in libreria</span>}
+                    {inLibrary && <span className="ml-2 text-xs text-ok">✓ in libreria</span>}
                   </p>
                   <p className="mt-0.5 font-sans text-xs text-ink-dim">{entry.hint}</p>
                 </div>
@@ -239,7 +239,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
                     type="button"
                     disabled={pending || Boolean(assigned)}
                     onClick={() => assign(event.id, inLibrary.id)}
-                    className="ml-auto rounded-full border border-couch/50 px-3 py-1 text-couch disabled:opacity-60"
+                    className="ml-auto rounded-full border border-ok/50 px-3 py-1 text-ok disabled:opacity-60"
                   >
                     {assigned ? `Usato per: ${event.label}` : `Usa per: ${event.label}`}
                   </button>
@@ -250,7 +250,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
         })}
       </ul>
 
-      {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
+      {error && <p className="mt-3 text-center font-sans text-sm text-danger">{error}</p>}
     </div>
   );
 }

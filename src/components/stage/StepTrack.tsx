@@ -2,10 +2,10 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { SHOW_STEPS, type ShowStepId } from "@/lib/show";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 
 interface StepTrackProps {
-  current: ShowStepId;
+  current: string;
   variant?: "tv" | "phone";
   className?: string;
 }
@@ -13,13 +13,14 @@ interface StepTrackProps {
 /** The evening's running order, with the step in progress lit up. */
 export function StepTrack({ current, variant = "phone", className }: StepTrackProps) {
   const isTv = variant === "tv";
-  const currentIndex = SHOW_STEPS.findIndex((s) => s.id === current);
+  const steps = useGameContent().steps;
+  const currentIndex = steps.findIndex((s) => s.id === current);
 
   if (!isTv) {
     return (
       <div className={cn("flex flex-col items-center gap-2", className)}>
         <div className="flex items-center gap-1.5">
-          {SHOW_STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <span
               key={step.id}
               className={cn(
@@ -30,7 +31,7 @@ export function StepTrack({ current, variant = "phone", className }: StepTrackPr
           ))}
         </div>
         <p className="font-sans text-[0.65rem] uppercase tracking-[0.3em] text-gold-300">
-          {SHOW_STEPS[currentIndex]?.short}
+          {steps[currentIndex]?.short}
         </p>
       </div>
     );
@@ -44,10 +45,10 @@ export function StepTrack({ current, variant = "phone", className }: StepTrackPr
         aria-hidden
         className="absolute left-[4.5rem] top-5 h-px origin-left bg-gold-400/70"
         initial={false}
-        animate={{ width: `calc((100% - 9rem) * ${currentIndex / (SHOW_STEPS.length - 1)})` }}
+        animate={{ width: `calc((100% - 9rem) * ${currentIndex / Math.max(1, steps.length - 1)})` }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       />
-      {SHOW_STEPS.map((step, i) => {
+      {steps.map((step, i) => {
         const state = i === currentIndex ? "current" : i < currentIndex ? "done" : "todo";
         return (
           <li key={step.id} className="relative z-10 flex w-24 flex-col items-center gap-2">
