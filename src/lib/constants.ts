@@ -60,8 +60,12 @@ export const TIMER_TIMEOUT_HOLD_MS = 3_000;
 /** Total duration of the draw shuffle animation before the names are revealed. */
 export const DRAW_SHUFFLE_MS = 2_600;
 
-/** How long the drawn matchup stays on screen (from draw start) before auto-returning to the scoreboard. */
-export const DRAW_TOTAL_HOLD_MS = 7_000;
+/**
+ * How long the drawn contestant stays on screen (from draw start) before
+ * auto-returning to the scoreboard; the admin can go back sooner with
+ * "Torna al tabellone".
+ */
+export const DRAW_TOTAL_HOLD_MS = 5 * 60_000;
 
 /** Suspense hold before the winner (or pareggio) is revealed, from final sequence start. */
 export const FINAL_SUSPENSE_MS = 3_400;

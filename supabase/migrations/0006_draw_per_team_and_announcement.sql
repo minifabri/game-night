@@ -1,7 +1,5 @@
--- Estrazione separata per squadra: the admin now draws one team at a time.
--- `draw_team` says which team the current DRAW run is shuffling; the other
--- team's pick (if any) stays on screen as the already-drawn opponent.
--- NULL means a legacy "both teams at once" draw.
+-- Estrazione separata per squadra: each team is drawn on its own.
+-- `draw_team` says which team the current DRAW screen is showing.
 
 alter table game_state
   add column draw_team text references teams(id);
