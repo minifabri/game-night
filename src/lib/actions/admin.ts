@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  DRAW_SHUFFLE_MS,
   DRAW_TOTAL_HOLD_MS,
   FINAL_TOTAL_MS,
   TEAM_ORDER,
@@ -397,10 +398,10 @@ export async function finishTimer(): Promise<ActionResult> {
 const drawSchema = z.object({ team: z.enum(["palestrati", "divanisti"]) });
 
 /**
- * Draws a random participant of one team. The other team's pick is kept on
- * screen when this team hasn't been drawn yet in the current round (so the
- * admin can draw the Palestrato first and the Divanista later); drawing a
- * team that already has a pick starts a new round and clears the other one.
+ * Draws a random participant of one team, independently of the other team:
+ * only that team is shown on screen, and the other team's last pick is left
+ * untouched. Allowed from the scoreboard or over a finished draw (so the
+ * other team can be drawn straight away), but not mid-shuffle.
  */
 export async function drawParticipant(input: { team: TeamId }): Promise<ActionResult> {
   const guard = await requireAdmin();
@@ -426,15 +427,19 @@ export async function drawParticipant(input: { team: TeamId }): Promise<ActionRe
 
   const { data: current } = await supabase
     .from("game_state")
-    .select("draw_nonce, status, draw_gym_participant_id, draw_couch_participant_id")
+    .select("draw_nonce, status, draw_started_at")
     .eq("id", 1)
     .single();
   if (current?.status === "PAUSED") return { ok: false, error: "Il gioco è in pausa." };
-  if (current?.status === "DRAW") return { ok: false, error: "C'è già un'estrazione in corso." };
+  if (
+    current?.status === "DRAW" &&
+    current.draw_started_at &&
+    Date.now() - new Date(current.draw_started_at as string).getTime() < DRAW_SHUFFLE_MS
+  ) {
+    return { ok: false, error: "C'è già un'estrazione in corso." };
+  }
 
   const ownColumn = team === "palestrati" ? "draw_gym_participant_id" : "draw_couch_participant_id";
-  const otherColumn = team === "palestrati" ? "draw_couch_participant_id" : "draw_gym_participant_id";
-  const startsNewRound = current?.[ownColumn] != null;
 
   const { error } = await supabase
     .from("game_state")
@@ -442,7 +447,6 @@ export async function drawParticipant(input: { team: TeamId }): Promise<ActionRe
       status: "DRAW",
       draw_team: team,
       [ownColumn]: pick,
-      ...(startsNewRound ? { [otherColumn]: null } : {}),
       draw_started_at: new Date().toISOString(),
       draw_nonce: ((current?.draw_nonce as number) ?? 0) + 1,
     })
@@ -452,19 +456,19 @@ export async function drawParticipant(input: { team: TeamId }): Promise<ActionRe
   return { ok: true };
 }
 
-/** Forgets both drawn contestants, so the next draw starts a fresh matchup. */
-export async function clearDraw(): Promise<ActionResult> {
+/** Admin "Torna al tabellone": leaves the draw result screen right away. */
+export async function endDraw(): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
 
   const supabase = getSupabaseAdminClient();
   const { error } = await supabase
     .from("game_state")
-    .update({ draw_gym_participant_id: null, draw_couch_participant_id: null, draw_team: null })
+    .update({ status: "GAME" })
     .eq("id", 1)
-    .neq("status", "DRAW");
+    .eq("status", "DRAW");
 
-  if (error) return { ok: false, error: "Impossibile azzerare l'estrazione." };
+  if (error) return { ok: false, error: "Impossibile tornare al tabellone." };
   return { ok: true };
 }
 

@@ -44,7 +44,7 @@ REGISTRATION → GAME → TIMER → DRAW → FINAL_REVEAL → FINISHED
 GAME / TIMER ⇄ PAUSED   (pausa manuale dall'admin; un timer in corso viene congelato e riparte alla ripresa)
 ```
 
-**Estrazione per squadra**: l'admin estrae un concorrente alla volta ("Estrai Palestrato", "Estrai Divanista"). `draw_team` dice quale squadra si sta estraendo; l'estratto dell'altra squadra, se c'è già, resta a schermo come avversario. Estrarre di nuovo una squadra che ha già il suo concorrente apre una nuova sfida (l'altro estratto viene azzerato); "Nuova sfida" li azzera entrambi.
+**Estrazione per squadra**: "Estrai Palestrato" ed "Estrai Divanista" sono indipendenti (si può estrarre anche una sola squadra). `draw_team` dice quale squadra è a schermo e la scena mostra solo quella. Il nome estratto resta a schermo fino a "Torna al tabellone" dall'admin (o, al massimo, 5 minuti); da lì si può anche estrarre subito l'altra squadra.
 
 **Messaggio a schermo**: `announcement_message` non è uno stato ma un overlay: quando è valorizzato, TV e telefoni mostrano la scritta sopra qualunque scena (la scena sotto continua, es. un timer). "Togli" lo rimette a `NULL`.
 
@@ -138,9 +138,9 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] La sala d'attesa mostra i nomi giusti nella squadra giusta, contatori corretti, senza punteggi.
 - [ ] "Avvia gioco" dall'admin fa passare `/` e `/display` alla scoreboard **senza refresh**.
 - [ ] Modificare un punteggio nell'admin aggiorna `/display` in tempo reale, con l'animazione del numero.
-- [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT → ritorno automatico alla scoreboard dopo ~3s.
-- [ ] Pausa / Riprendi mantengono il tempo corretto; Stop torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
-- [ ] "Estrai Palestrato": shuffle solo sui Palestrati, lato Divanisti con "?", reveal, ritorno automatico. Poi "Estrai Divanista": il Palestrato estratto resta a schermo come avversario.
+- [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT che resta a schermo finché non premi "Torna al tabellone" (ritorno automatico solo dopo 5 minuti).
+- [ ] Pausa / Riprendi mantengono il tempo corretto; "Torna al tabellone" ferma il timer e torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
+- [ ] "Estrai Palestrato": a schermo solo i Palestrati, shuffle, reveal, il nome resta finché non premi "Torna al tabellone". Stesso per "Estrai Divanista", anche direttamente dalla schermata dell'altra estrazione.
 - [ ] Estrazione di una squadra vuota: errore gestito, nessun crash.
 - [ ] "Messaggio a schermo": Mostra / Sostituisci / Togli, anche durante un timer (il timer continua sotto e riappare quando il messaggio viene tolto).
 - [ ] "Termina gioco" chiede conferma, poi mostra la sequenza finale e il/la vincitore/vincitrice.
