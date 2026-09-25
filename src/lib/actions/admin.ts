@@ -13,6 +13,7 @@ import {
   DRAW_TOTAL_HOLD_MS,
   FINAL_TOTAL_MS,
   TEAM_ORDER,
+  TEAMS,
   TIMER_STARTUP_COUNTDOWN_MS,
   TIMER_TIMEOUT_HOLD_MS,
 } from "@/lib/constants";
@@ -393,48 +394,77 @@ export async function finishTimer(): Promise<ActionResult> {
 // Random draw
 // ---------------------------------------------------------------------------
 
-export async function drawParticipants(): Promise<ActionResult> {
+const drawSchema = z.object({ team: z.enum(["palestrati", "divanisti"]) });
+
+/**
+ * Draws a random participant of one team. The other team's pick is kept on
+ * screen when this team hasn't been drawn yet in the current round (so the
+ * admin can draw the Palestrato first and the Divanista later); drawing a
+ * team that already has a pick starts a new round and clears the other one.
+ */
+export async function drawParticipant(input: { team: TeamId }): Promise<ActionResult> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
+
+  const parsed = drawSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Squadra non valida." };
+  const team = parsed.data.team;
 
   const supabase = getSupabaseAdminClient();
   const { data: participants, error: fetchError } = await supabase
     .from("participants")
-    .select("id, team_id");
+    .select("id")
+    .eq("team_id", team);
 
   if (fetchError) return { ok: false, error: "Impossibile leggere i partecipanti." };
-
-  const byTeam: Record<TeamId, string[]> = { palestrati: [], divanisti: [] };
-  for (const p of participants ?? []) {
-    byTeam[p.team_id as TeamId].push(p.id as string);
+  const pool = (participants ?? []).map((p) => p.id as string);
+  if (pool.length === 0) {
+    return { ok: false, error: `Nessun partecipante tra i ${TEAMS[team].name}.` };
   }
 
-  if (byTeam.palestrati.length === 0 || byTeam.divanisti.length === 0) {
-    return { ok: false, error: "Servono partecipanti in entrambe le squadre." };
-  }
-
-  const gymPick = byTeam.palestrati[Math.floor(Math.random() * byTeam.palestrati.length)];
-  const couchPick = byTeam.divanisti[Math.floor(Math.random() * byTeam.divanisti.length)];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
 
   const { data: current } = await supabase
     .from("game_state")
-    .select("draw_nonce, status")
+    .select("draw_nonce, status, draw_gym_participant_id, draw_couch_participant_id")
     .eq("id", 1)
     .single();
   if (current?.status === "PAUSED") return { ok: false, error: "Il gioco è in pausa." };
+  if (current?.status === "DRAW") return { ok: false, error: "C'è già un'estrazione in corso." };
+
+  const ownColumn = team === "palestrati" ? "draw_gym_participant_id" : "draw_couch_participant_id";
+  const otherColumn = team === "palestrati" ? "draw_couch_participant_id" : "draw_gym_participant_id";
+  const startsNewRound = current?.[ownColumn] != null;
 
   const { error } = await supabase
     .from("game_state")
     .update({
       status: "DRAW",
-      draw_gym_participant_id: gymPick,
-      draw_couch_participant_id: couchPick,
+      draw_team: team,
+      [ownColumn]: pick,
+      ...(startsNewRound ? { [otherColumn]: null } : {}),
       draw_started_at: new Date().toISOString(),
       draw_nonce: ((current?.draw_nonce as number) ?? 0) + 1,
     })
     .eq("id", 1);
 
   if (error) return { ok: false, error: "Impossibile avviare l'estrazione." };
+  return { ok: true };
+}
+
+/** Forgets both drawn contestants, so the next draw starts a fresh matchup. */
+export async function clearDraw(): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("game_state")
+    .update({ draw_gym_participant_id: null, draw_couch_participant_id: null, draw_team: null })
+    .eq("id", 1)
+    .neq("status", "DRAW");
+
+  if (error) return { ok: false, error: "Impossibile azzerare l'estrazione." };
   return { ok: true };
 }
 
@@ -453,6 +483,44 @@ export async function finishDraw(): Promise<ActionResult> {
     .lte("draw_started_at", cutoff);
 
   if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// On-screen announcement
+// ---------------------------------------------------------------------------
+
+const announcementSchema = z.object({ message: z.string().trim().min(1).max(600) });
+
+/** Shows a message on every screen, over whatever is running, without pausing the game. */
+export async function showAnnouncement(input: { message: string }): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = announcementSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Scrivi un messaggio (max 600 caratteri)." };
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("game_state")
+    .update({ announcement_message: parsed.data.message })
+    .eq("id", 1);
+
+  if (error) return { ok: false, error: "Impossibile mostrare il messaggio." };
+  return { ok: true };
+}
+
+export async function hideAnnouncement(): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("game_state")
+    .update({ announcement_message: null })
+    .eq("id", 1);
+
+  if (error) return { ok: false, error: "Impossibile togliere il messaggio." };
   return { ok: true };
 }
 
@@ -553,6 +621,7 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
       draw_gym_participant_id: null,
       draw_couch_participant_id: null,
       draw_started_at: null,
+      draw_team: null,
       final_started_at: null,
       final_gym_score: null,
       final_couch_score: null,
@@ -561,6 +630,7 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
       pause_previous_status: null,
       pause_message: null,
       pause_resumes_timer: false,
+      announcement_message: null,
     })
     .eq("id", 1);
 
@@ -595,6 +665,7 @@ export async function resetGameData(): Promise<ActionResult> {
       draw_gym_participant_id: null,
       draw_couch_participant_id: null,
       draw_started_at: null,
+      draw_team: null,
       final_started_at: null,
       final_gym_score: null,
       final_couch_score: null,
@@ -603,6 +674,7 @@ export async function resetGameData(): Promise<ActionResult> {
       pause_previous_status: null,
       pause_message: null,
       pause_resumes_timer: false,
+      announcement_message: null,
     })
     .eq("id", 1);
 
