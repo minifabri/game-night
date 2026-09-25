@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useGameState } from "@/hooks/useGameState";
+import { useActiveGame } from "@/components/game/ActiveGameProvider";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useScores } from "@/hooks/useScores";
 import { useAudioState } from "@/hooks/useAudioState";
@@ -14,6 +14,8 @@ import { ParticipantsPanel } from "@/components/admin/ParticipantsPanel";
 import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
+import { GamesPanel } from "@/components/admin/GamesPanel";
+import { useGameSecrets } from "@/hooks/useGameSecrets";
 import { ShowPanel } from "@/components/admin/ShowPanel";
 import { QuestionsPanel } from "@/components/admin/QuestionsPanel";
 import { AnnouncementPanel } from "@/components/admin/AnnouncementPanel";
@@ -23,18 +25,21 @@ import { DevResetPanel } from "@/components/admin/DevResetPanel";
 import { logoutAdmin } from "@/lib/actions/admin";
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+const NO_CHALLENGES: never[] = [];
 
 export function AdminDashboard() {
-  const { gameState, loading: gsLoading, error: gsError } = useGameState();
-  const { participants, loading: pLoading } = useParticipants();
-  const { totals, byChallenge, loading: sLoading } = useScores();
+  const { gameState, game, loading: gLoading, error: gError } = useActiveGame();
+  const gameId = game?.id ?? null;
+  const { participants, loading: pLoading } = useParticipants(gameId);
+  const { totals, byChallenge, loading: sLoading } = useScores(gameId, game?.content.challenges ?? NO_CHALLENGES);
+  const secrets = useGameSecrets(gameId, game);
   const { audioState, error: audioError } = useAudioState();
   const { sounds } = useSounds();
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  if (gsError) return <StatusScreen kind="error" />;
-  if (gsLoading || pLoading || sLoading || !gameState) return <StatusScreen kind="loading" />;
+  if (gError) return <StatusScreen kind="error" message={gError} />;
+  if (gLoading || pLoading || sLoading || !gameState || !game) return <StatusScreen kind="loading" />;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
@@ -54,8 +59,8 @@ export function AdminDashboard() {
       </header>
 
       <GameLifecyclePanel gameState={gameState} />
-      <ShowPanel gameState={gameState} />
-      <QuestionsPanel gameState={gameState} />
+      <ShowPanel gameState={gameState} secrets={secrets} />
+      <QuestionsPanel gameState={gameState} secrets={secrets} />
       <AnnouncementPanel gameState={gameState} />
       <ParticipantsPanel participants={participants} />
       <ScoreEditor byChallenge={byChallenge} />
@@ -69,6 +74,7 @@ export function AdminDashboard() {
         sounds={sounds}
       />
       <ResetScoresPanel />
+      <GamesPanel activeGameId={game.id} />
       {DEV_MODE && <DevResetPanel />}
     </div>
   );

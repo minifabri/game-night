@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { BRING_IDEAS } from "@/lib/constants";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 
@@ -17,6 +17,8 @@ export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
   const [food, setFood] = useState(false);
   const [drink, setDrink] = useState(false);
   const [ideasOpen, setIdeasOpen] = useState(false);
+  const bring = useGameContent().registration?.bring;
+  const ideas = bring?.ideas;
   const canSubmit = (food || drink) && !submitting;
 
   return (
@@ -41,17 +43,19 @@ export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
         transition={{ delay: 0.26, duration: 0.5 }}
         className="flex flex-col items-center gap-1.5"
       >
-        <p className="font-sans text-xs italic text-ink-dim">Vegano e senza glutine, please.</p>
-        <button
-          type="button"
-          onClick={() => setIdeasOpen(true)}
-          className="font-sans text-xs uppercase tracking-[0.2em] text-gold-400 underline underline-offset-4 hover:text-gold-300"
-        >
-          Ti serve un&apos;idea?
-        </button>
+        {bring?.note && <p className="font-sans text-xs italic text-ink-dim">{bring.note}</p>}
+        {ideas && (
+          <button
+            type="button"
+            onClick={() => setIdeasOpen(true)}
+            className="font-sans text-xs uppercase tracking-[0.2em] text-gold-400 underline underline-offset-4 hover:text-gold-300"
+          >
+            Ti serve un&apos;idea?
+          </button>
+        )}
       </motion.div>
 
-      {error && <p className="font-sans text-sm text-gym">{error}</p>}
+      {error && <p className="font-sans text-sm text-danger">{error}</p>}
 
       <motion.div animate={{ opacity: canSubmit ? 1 : 0.3 }} transition={{ duration: 0.3 }}>
         <Button size="lg" disabled={!canSubmit} onClick={() => onSubmit({ bringsFood: food, bringsDrink: drink })}>
@@ -60,11 +64,9 @@ export function StepBring({ onSubmit, submitting, error }: StepBringProps) {
       </motion.div>
 
       <Modal open={ideasOpen} title="Qualche idea" onClose={() => setIdeasOpen(false)}>
-        <p className="-mt-2 font-sans text-xs italic text-ink-dim">
-          Tutto vegano e senza glutine, ovviamente.
-        </p>
-        <IdeaList label="Da mangiare" items={BRING_IDEAS.food} />
-        <IdeaList label="Da bere" items={BRING_IDEAS.drink} />
+        {bring?.note && <p className="-mt-2 font-sans text-xs italic text-ink-dim">{bring.note}</p>}
+        <IdeaList label="Da mangiare" items={ideas?.food ?? []} />
+        <IdeaList label="Da bere" items={ideas?.drink ?? []} />
         <Button variant="ghost" size="md" onClick={() => setIdeasOpen(false)} className="mt-1 self-center">
           Ho capito
         </Button>
