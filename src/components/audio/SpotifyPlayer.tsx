@@ -55,14 +55,17 @@ interface SpotifyPlayerProps {
   /** Bumped when the track is (re)started from the beginning. */
   nonce: number;
   muted: boolean;
+  /** A long effect is playing: pause for it and pick up where it left off. */
+  held?: boolean;
   floating?: boolean;
 }
 
 /**
  * Plays a Spotify playlist/album/track through the embed player, driven by the
- * console's music commands. The embed has no volume control, so "Muto" pauses it.
+ * console's music commands. The embed has no volume control, so "Muto" pauses it,
+ * and so do long effects (instead of ducking like the file player does).
  */
-export function SpotifyPlayer({ uri, status, nonce, muted, floating }: SpotifyPlayerProps) {
+export function SpotifyPlayer({ uri, status, nonce, muted, held = false, floating }: SpotifyPlayerProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<EmbedController | null>(null);
   const loadedUri = useRef<string | null>(null);
@@ -71,8 +74,8 @@ export function SpotifyPlayer({ uri, status, nonce, muted, floating }: SpotifyPl
   const fromStart = useRef(true);
   const lastNonce = useRef(nonce);
 
-  const desired = useRef({ uri, status, muted });
-  desired.current = { uri, status, muted };
+  const desired = useRef({ uri, status, muted, held });
+  desired.current = { uri, status, muted, held };
 
   const sync = useRef(() => {});
   sync.current = () => {
@@ -88,7 +91,7 @@ export function SpotifyPlayer({ uri, status, nonce, muted, floating }: SpotifyPl
       setTimeout(() => sync.current(), 1500);
       return;
     }
-    if (want.status === "playing" && !want.muted) {
+    if (want.status === "playing" && !want.muted && !want.held) {
       if (fromStart.current) {
         fromStart.current = false;
         controller.play();
@@ -140,7 +143,7 @@ export function SpotifyPlayer({ uri, status, nonce, muted, floating }: SpotifyPl
       fromStart.current = true;
     }
     sync.current();
-  }, [uri, status, nonce, muted]);
+  }, [uri, status, nonce, muted, held]);
 
   return (
     <div

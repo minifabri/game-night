@@ -36,12 +36,17 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
     () => engine.isUnlocked(),
     () => false
   );
+  const holdingMusic = useSyncExternalStore(
+    (fn) => engine.subscribe(fn),
+    () => engine.isHoldingMusic(),
+    () => false
+  );
 
   const soundsRef = useRef(sounds);
   soundsRef.current = sounds;
 
   const play = useCallback(
-    (ref: SoundRef, opts?: { durationMs?: number }) => {
+    (ref: SoundRef, opts?: { durationMs?: number; holdMusic?: boolean }) => {
       const url = parseBuiltin(ref) ? null : soundsRef.current.find((s) => s.id === ref)?.url;
       engine.playEffect({ ref, url }, opts);
     },
@@ -114,7 +119,8 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
       const ref = resolveAutoRef(event, autoMapRef.current);
       if (!ref) return;
       if (opts?.cut) engine.stopEffects();
-      play(ref, opts);
+      // the game-start stinger is short but should still stand out over Spotify
+      play(ref, { durationMs: opts?.durationMs, holdMusic: event === "game_start" });
     },
     [autoEnabled, engine, play]
   );
@@ -159,6 +165,7 @@ export function AudioDirector({ gameState, totals, audioState, sounds, showUnloc
         status={audioState.music_status}
         nonce={audioState.music_nonce}
         muted={audioState.muted}
+        held={holdingMusic}
         floating={floatingPlayer}
       />
     ) : null;
