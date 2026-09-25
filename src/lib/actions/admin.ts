@@ -666,9 +666,9 @@ export async function settleFinalReveal(): Promise<ActionResult> {
 }
 
 /**
- * Zeroes every score and rewinds the game phase (timer/draw/final fields) so
- * a new simulation can start, without touching `participants` — registered
- * players and teams are left exactly as they are.
+ * Zeroes every score and puts the game back to REGISTRATION, as if it had
+ * never started (timer/draw/final/scaletta fields cleared), without touching
+ * `participants` — registered players and teams are left exactly as they are.
  */
 export async function resetScoresKeepParticipants(): Promise<ActionResult> {
   const guard = await requireAdmin();
@@ -684,7 +684,7 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
   const { error } = await supabase
     .from("game_state")
     .update({
-      status: "GAME",
+      status: "REGISTRATION",
       timer_label: null,
       timer_duration_ms: null,
       timer_phase: "idle",
