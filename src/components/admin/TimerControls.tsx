@@ -67,7 +67,7 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
         </p>
       )}
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Button
           size="md"
           variant="ghost"
@@ -86,14 +86,6 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
         </Button>
         <Button
           size="md"
-          variant="danger"
-          disabled={pending || !isTimerStatus}
-          onClick={() => run(stopTimer)}
-        >
-          Stop
-        </Button>
-        <Button
-          size="md"
           variant="ghost"
           disabled={pending || !isTimerStatus}
           onClick={() => run(resetTimer)}
@@ -101,6 +93,11 @@ export function TimerControls({ gameState }: { gameState: GameState }) {
           Reset
         </Button>
       </div>
+
+      {/* Stops a running timer or leaves the TIME OUT card, which otherwise stays up for minutes. */}
+      <Button size="lg" disabled={pending || !isTimerStatus} onClick={() => run(stopTimer)} className="mt-3 w-full">
+        Torna al tabellone
+      </Button>
 
       {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
     </Panel>

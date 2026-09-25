@@ -138,8 +138,8 @@ Checklist consigliata, da fare con `/`, `/display` e `/admin` aperti insieme (an
 - [ ] La sala d'attesa mostra i nomi giusti nella squadra giusta, contatori corretti, senza punteggi.
 - [ ] "Avvia gioco" dall'admin fa passare `/` e `/display` alla scoreboard **senza refresh**.
 - [ ] Modificare un punteggio nell'admin aggiorna `/display` in tempo reale, con l'animazione del numero.
-- [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT → ritorno automatico alla scoreboard dopo ~3s.
-- [ ] Pausa / Riprendi mantengono il tempo corretto; Stop torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
+- [ ] Ogni preset del timer (5s, 10s, 30s, 1m, 3m, 5m) e il timer personalizzato: countdown 3-2-1 → timer grande → TIME OUT che resta a schermo finché non premi "Torna al tabellone" (ritorno automatico solo dopo 5 minuti).
+- [ ] Pausa / Riprendi mantengono il tempo corretto; "Torna al tabellone" ferma il timer e torna subito alla scoreboard; Reset ricarica lo stesso preset pronto a ripartire.
 - [ ] "Estrai Palestrato": a schermo solo i Palestrati, shuffle, reveal, il nome resta finché non premi "Torna al tabellone". Stesso per "Estrai Divanista", anche direttamente dalla schermata dell'altra estrazione.
 - [ ] Estrazione di una squadra vuota: errore gestito, nessun crash.
 - [ ] "Messaggio a schermo": Mostra / Sostituisci / Togli, anche durante un timer (il timer continua sotto e riappare quando il messaggio viene tolto).

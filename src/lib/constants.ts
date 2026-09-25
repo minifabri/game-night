@@ -54,8 +54,11 @@ export const TIMER_PRESETS: TimerPreset[] = [
 /** Duration of the "GAME STARTS IN 3-2-1" scenic countdown before a timer actually starts running. */
 export const TIMER_STARTUP_COUNTDOWN_MS = 3_000;
 
-/** How long the full-screen "TIME OUT" card stays up before auto-returning to the scoreboard. */
-export const TIMER_TIMEOUT_HOLD_MS = 3_000;
+/**
+ * How long the full-screen "TIME OUT" card stays up before auto-returning to
+ * the scoreboard; the admin can go back sooner with "Torna al tabellone".
+ */
+export const TIMER_TIMEOUT_HOLD_MS = 5 * 60_000;
 
 /** Total duration of the draw shuffle animation before the names are revealed. */
 export const DRAW_SHUFFLE_MS = 2_600;
