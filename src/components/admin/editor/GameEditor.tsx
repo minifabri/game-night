@@ -10,6 +10,7 @@ import { StatusScreen } from "@/components/ui/StatusScreen";
 import { ColorField, ImageField, TextField } from "@/components/admin/editor/fields";
 import { StepEditor } from "@/components/admin/editor/StepEditor";
 import { normalizeForSave, type Pack } from "@/components/admin/editor/pack-ops";
+import { PreviewModal } from "@/components/admin/preview/PreviewModal";
 import { TEAM_ORDER } from "@/lib/constants";
 import type { TeamId } from "@/lib/types";
 
@@ -33,6 +34,8 @@ export function GameEditor({ gameId }: { gameId: string }) {
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<{ message: string; details?: string[] } | null>(null);
   const [pending, startTransition] = useTransition();
+  /** Scene the preview opens on; null = preview closed. */
+  const [preview, setPreview] = useState<string | null>(null);
   const { gameState } = useGameState();
   const onAir = gameState?.game_id === gameId;
 
@@ -155,9 +158,19 @@ export function GameEditor({ gameId }: { gameId: string }) {
           Tocca uno step per aprirlo. Nei giochi puoi aggiungere sotto-step e, in ognuno, un round di domande.
         </p>
         {pack.steps.map((step, i) => (
-          <StepEditor key={step.id} gameId={gameId} pack={pack} step={step} index={i} setPack={setPack} />
+          <StepEditor
+            key={step.id}
+            gameId={gameId}
+            pack={pack}
+            step={step}
+            index={i}
+            setPack={setPack}
+            onPreview={() => setPreview(`step:${step.id}`)}
+          />
         ))}
       </section>
+
+      {preview !== null && <PreviewModal pack={pack} startKey={preview} onClose={() => setPreview(null)} />}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-plum-700/80 bg-void/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
@@ -177,6 +190,13 @@ export function GameEditor({ gameId }: { gameId: string }) {
             <p className="flex-1 font-sans text-xs text-ink-dim">
               {pending ? "Salvo…" : dirty ? "Modifiche non salvate" : saved ? "Salvato ✓" : "Nessuna modifica"}
             </p>
+            <button
+              type="button"
+              onClick={() => setPreview("waiting")}
+              className="rounded-full border border-ink-dim/30 px-5 py-3 font-sans text-sm text-cream hover:border-gold-400/70"
+            >
+              Anteprima
+            </button>
             <button
               type="button"
               disabled={pending || !dirty}
