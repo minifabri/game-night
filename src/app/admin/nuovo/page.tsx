@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { AdminLogin } from "@/components/admin/AdminLogin";
-import { AdminHub } from "@/components/admin/AdminHub";
+import { NewGameForm } from "@/components/admin/NewGameForm";
 
 export const metadata: Metadata = {
-  title: "Admin — Game Night",
+  title: "Nuovo gioco — Game Night",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPage() {
+export default async function NewGamePage() {
   const authed = await isAdminAuthenticated();
-  return authed ? <AdminHub /> : <AdminLogin />;
+  return authed ? <NewGameForm /> : <AdminLogin />;
 }

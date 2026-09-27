@@ -1,20 +1,17 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useActiveGame } from "@/components/game/ActiveGameProvider";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useScores } from "@/hooks/useScores";
 import { useAudioState } from "@/hooks/useAudioState";
 import { useSounds } from "@/hooks/useSounds";
 import { StatusScreen } from "@/components/ui/StatusScreen";
-import { Wordmark } from "@/components/brand/Wordmark";
 import { GameLifecyclePanel } from "@/components/admin/GameLifecyclePanel";
 import { ParticipantsPanel } from "@/components/admin/ParticipantsPanel";
 import { ScoreEditor } from "@/components/admin/ScoreEditor";
 import { TimerControls } from "@/components/admin/TimerControls";
 import { DrawControl } from "@/components/admin/DrawControl";
-import { GamesPanel } from "@/components/admin/GamesPanel";
+import { AdminHeader } from "@/components/admin/AdminHeader";
 import { useGameSecrets } from "@/hooks/useGameSecrets";
 import { ShowPanel } from "@/components/admin/ShowPanel";
 import { QuestionsPanel } from "@/components/admin/QuestionsPanel";
@@ -23,7 +20,6 @@ import { AnnouncementPanel } from "@/components/admin/AnnouncementPanel";
 import { SoundConsole } from "@/components/admin/SoundConsole";
 import { ResetScoresPanel } from "@/components/admin/ResetScoresPanel";
 import { DevResetPanel } from "@/components/admin/DevResetPanel";
-import { logoutAdmin } from "@/lib/actions/admin";
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 const NO_CHALLENGES: never[] = [];
@@ -36,8 +32,6 @@ export function AdminDashboard() {
   const secrets = useGameSecrets(gameId, game);
   const { audioState, error: audioError } = useAudioState();
   const { sounds } = useSounds();
-  const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   if (gError) return <StatusScreen kind="error" message={gError} />;
   if (gLoading || pLoading || sLoading || !gameState || !game) return <StatusScreen kind="loading" />;
@@ -45,20 +39,11 @@ export function AdminDashboard() {
   return (
     // pb leaves room for the sticky QuickBar at the bottom
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pb-72 pt-8 sm:px-6">
-      <header className="flex items-center justify-between">
-        <Wordmark size="sm" className="items-start text-left" />
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => startTransition(async () => {
-            await logoutAdmin();
-            router.refresh();
-          })}
-          className="font-sans text-xs uppercase tracking-[0.2em] text-ink-dim hover:text-gold-300"
-        >
-          Esci
-        </button>
-      </header>
+      <AdminHeader
+        back={{ href: "/admin", label: "Giochi" }}
+        title={game.title}
+        subtitle="Console · in gioco"
+      />
 
       <GameLifecyclePanel gameState={gameState} />
       <ShowPanel gameState={gameState} secrets={secrets} />
@@ -76,7 +61,6 @@ export function AdminDashboard() {
         sounds={sounds}
       />
       <ResetScoresPanel />
-      <GamesPanel activeGameId={game.id} />
       {DEV_MODE && <DevResetPanel />}
       <QuickBar gameState={gameState} byChallenge={byChallenge} />
     </div>

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { splitPack, type GamePack } from "../src/lib/game-pack.ts";
+import { describePackErrors, gamePackSchema, splitPack, type GamePack } from "../src/lib/game-pack.ts";
 
 /** Loads `games/<id>.ts`, validates it and splits it into public content + admin-only secrets. */
 export async function readPack(file: string | undefined) {
@@ -9,11 +9,11 @@ export async function readPack(file: string | undefined) {
     process.exit(1);
   }
   const mod = (await import(pathToFileURL(path.resolve(file)).href)) as { default: GamePack };
-  try {
-    return splitPack(mod.default);
-  } catch (err) {
+  const parsed = gamePackSchema.safeParse(mod.default);
+  if (!parsed.success) {
     console.error(`Il file ${file} non è valido:`);
-    console.error(err instanceof Error ? err.message : err);
+    for (const line of describePackErrors(parsed.error, mod.default)) console.error(`- ${line}`);
     process.exit(1);
   }
+  return splitPack(mod.default);
 }
