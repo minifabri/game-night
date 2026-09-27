@@ -4,7 +4,7 @@ import { forwardRef } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "ghost" | "danger" | "team-gym" | "team-couch";
+type Variant = "primary" | "ghost" | "danger" | "team-a" | "team-b";
 type Size = "md" | "lg";
 
 interface ButtonProps extends HTMLMotionProps<"button"> {
@@ -18,11 +18,11 @@ const variantClasses: Record<Variant, string> = {
   ghost:
     "bg-transparent text-cream border border-ink-dim/30 hover:border-gold-400/70 hover:text-gold-300",
   danger:
-    "bg-transparent text-gym border border-gym/50 hover:bg-gym/10 hover:border-gym",
-  "team-gym":
-    "bg-gym text-void hover:brightness-110 shadow-[0_0_0_1px_rgba(255,106,69,0.5)]",
-  "team-couch":
-    "bg-couch text-void hover:brightness-110 shadow-[0_0_0_1px_rgba(87,211,200,0.5)]",
+    "bg-transparent text-danger border border-danger/50 hover:bg-danger/10 hover:border-danger",
+  "team-a":
+    "bg-team-a text-void hover:brightness-110 shadow-[0_0_0_1px_rgba(255,106,69,0.5)]",
+  "team-b":
+    "bg-team-b text-void hover:brightness-110 shadow-[0_0_0_1px_rgba(87,211,200,0.5)]",
 };
 
 const sizeClasses: Record<Size, string> = {

@@ -1,35 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CHALLENGE_ORDER, CHALLENGES } from "@/lib/constants";
 import type { ChallengeId, TeamId } from "@/lib/types";
+import type { ChallengeRow } from "@/hooks/useScores";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import { setScore } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
 import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 import { cn } from "@/lib/cn";
 
 interface ScoreEditorProps {
-  byChallenge: { challengeId: ChallengeId; palestrati: number; divanisti: number }[];
+  byChallenge: ChallengeRow[];
 }
 
 export function ScoreEditor({ byChallenge }: ScoreEditorProps) {
+  const { challenges } = useGameContent();
   return (
     <Panel title="Punteggi">
       <div className="flex flex-col gap-4">
-        {CHALLENGE_ORDER.map((challengeId) => {
+        {challenges.map((challenge, i) => {
+          const challengeId = challenge.id;
           const row = byChallenge.find((r) => r.challengeId === challengeId);
           return (
             <div key={challengeId}>
               <p className="mb-2 flex items-center gap-2 font-sans text-sm text-ink-dim">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold-400/40 font-numeric text-xs text-gold-300">
-                  {CHALLENGES[challengeId].sort_order + 1}
+                  {i + 1}
                 </span>
-                <ChallengeIcon id={challengeId} className="h-4 w-4 shrink-0 text-gold-400/80" />
-                {CHALLENGES[challengeId].name}
+                <ChallengeIcon icon={challenge.icon} className="h-4 w-4 shrink-0 text-gold-400/80" />
+                {challenge.name}
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <ScoreCell challengeId={challengeId} teamId="palestrati" points={row?.palestrati ?? 0} />
-                <ScoreCell challengeId={challengeId} teamId="divanisti" points={row?.divanisti ?? 0} />
+                <ScoreCell challengeId={challengeId} teamId="a" points={row?.a ?? 0} />
+                <ScoreCell challengeId={challengeId} teamId="b" points={row?.b ?? 0} />
               </div>
             </div>
           );
@@ -68,7 +71,7 @@ function ScoreCell({
     <div
       className={cn(
         "flex items-center justify-between rounded-xl border px-2 py-1.5",
-        teamId === "palestrati" ? "border-gym/30" : "border-couch/30"
+        teamId === "a" ? "border-team-a/30" : "border-team-b/30"
       )}
     >
       <button
@@ -90,7 +93,7 @@ function ScoreCell({
         }}
         className={cn(
           "w-12 bg-transparent text-center font-numeric text-2xl outline-none",
-          teamId === "palestrati" ? "text-gym" : "text-couch",
+          teamId === "a" ? "text-team-a" : "text-team-b",
           saving && "opacity-60"
         )}
       />

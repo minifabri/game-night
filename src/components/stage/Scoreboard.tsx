@@ -2,16 +2,11 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { CHALLENGES } from "@/lib/constants";
 import type { TeamTotals } from "@/lib/types";
+import type { ChallengeRow } from "@/hooks/useScores";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
-
-interface ChallengeRow {
-  challengeId: keyof typeof CHALLENGES;
-  palestrati: number;
-  divanisti: number;
-}
 
 interface ScoreboardProps {
   totals: TeamTotals;
@@ -24,6 +19,7 @@ interface ScoreboardProps {
 
 export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag, header }: ScoreboardProps) {
   const isTv = variant === "tv";
+  const content = useGameContent();
 
   return (
     <motion.div
@@ -41,8 +37,8 @@ export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag, h
       )}
 
       <div className="grid grid-cols-2 items-end gap-4">
-        <TeamTotal label="Palestrati" value={totals.palestrati} color="gym" isTv={isTv} align="start" />
-        <TeamTotal label="Divanisti" value={totals.divanisti} color="couch" isTv={isTv} align="end" />
+        <TeamTotal label={content.teams.a.name} value={totals.a} team="a" isTv={isTv} align="start" />
+        <TeamTotal label={content.teams.b.name} value={totals.b} team="b" isTv={isTv} align="end" />
       </div>
 
       <div
@@ -53,47 +49,50 @@ export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag, h
       />
 
       <div className={cn("space-y-1.5", isTv && "space-y-2")}>
-        {byChallenge.map((row) => (
-          <div
-            key={row.challengeId}
-            className={cn(
-              "grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl px-3 py-2",
-              "bg-plum-900/40",
-              isTv && "px-5 py-3"
-            )}
-          >
-            <AnimatedNumber
-              value={row.palestrati}
-              className={cn("justify-self-end font-numeric text-gym-soft", isTv ? "text-3xl" : "text-lg")}
-            />
-            <div className="flex items-center justify-center gap-2">
-              <span
-                className={cn(
-                  "flex shrink-0 items-center justify-center rounded-full border border-gold-400/40 font-numeric text-gold-300",
-                  isTv ? "h-7 w-7 text-base" : "h-4 w-4 text-[0.6rem]"
-                )}
-              >
-                {CHALLENGES[row.challengeId].sort_order + 1}
-              </span>
-              <ChallengeIcon
-                id={row.challengeId}
-                className={cn("shrink-0 text-gold-400/80", isTv ? "h-6 w-6" : "h-3.5 w-3.5")}
+        {byChallenge.map((row, i) => {
+          const challenge = content.challenges.find((c) => c.id === row.challengeId);
+          return (
+            <div
+              key={row.challengeId}
+              className={cn(
+                "grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl px-3 py-2",
+                "bg-plum-900/40",
+                isTv && "px-5 py-3"
+              )}
+            >
+              <AnimatedNumber
+                value={row.a}
+                className={cn("justify-self-end font-numeric text-team-a-soft", isTv ? "text-3xl" : "text-lg")}
               />
-              <p
-                className={cn(
-                  "text-center font-sans uppercase tracking-[0.15em] text-ink-dim",
-                  isTv ? "text-sm" : "text-[0.65rem]"
-                )}
-              >
-                {CHALLENGES[row.challengeId].name}
-              </p>
+              <div className="flex items-center justify-center gap-2">
+                <span
+                  className={cn(
+                    "flex shrink-0 items-center justify-center rounded-full border border-gold-400/40 font-numeric text-gold-300",
+                    isTv ? "h-7 w-7 text-base" : "h-4 w-4 text-[0.6rem]"
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <ChallengeIcon
+                  icon={challenge?.icon}
+                  className={cn("shrink-0 text-gold-400/80", isTv ? "h-6 w-6" : "h-3.5 w-3.5")}
+                />
+                <p
+                  className={cn(
+                    "text-center font-sans uppercase tracking-[0.15em] text-ink-dim",
+                    isTv ? "text-sm" : "text-[0.65rem]"
+                  )}
+                >
+                  {challenge?.name}
+                </p>
+              </div>
+              <AnimatedNumber
+                value={row.b}
+                className={cn("justify-self-start font-numeric text-team-b-soft", isTv ? "text-3xl" : "text-lg")}
+              />
             </div>
-            <AnimatedNumber
-              value={row.divanisti}
-              className={cn("justify-self-start font-numeric text-couch-soft", isTv ? "text-3xl" : "text-lg")}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -102,13 +101,13 @@ export function Scoreboard({ totals, byChallenge, variant = "phone", finalTag, h
 function TeamTotal({
   label,
   value,
-  color,
+  team,
   isTv,
   align,
 }: {
   label: string;
   value: number;
-  color: "gym" | "couch";
+  team: "a" | "b";
   isTv: boolean;
   align: "start" | "end";
 }) {
@@ -117,7 +116,7 @@ function TeamTotal({
       <p
         className={cn(
           "font-display font-medium tracking-wide",
-          color === "gym" ? "text-gym" : "text-couch",
+          team === "a" ? "text-team-a" : "text-team-b",
           isTv ? "text-2xl sm:text-3xl" : "text-base"
         )}
       >

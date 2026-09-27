@@ -60,9 +60,9 @@ export function PausedScene({ gameState, totals, variant = "phone" }: PausedScen
           isTv ? "gap-10 text-6xl" : "gap-6 text-3xl"
         )}
       >
-        <span className="text-gym">{totals.palestrati}</span>
+        <span className="text-team-a">{totals.a}</span>
         <span className="text-ink-dim/50">–</span>
-        <span className="text-couch">{totals.divanisti}</span>
+        <span className="text-team-b">{totals.b}</span>
       </div>
     </motion.div>
   );

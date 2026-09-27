@@ -5,22 +5,17 @@ import { adjustScore } from "@/lib/actions/admin";
 import { setAnswerVisible, showQuestion } from "@/lib/actions/show";
 import { ChallengeIcon } from "@/components/stage/ChallengeIcon";
 import { cn } from "@/lib/cn";
-import { CHALLENGE_ORDER, CHALLENGES, TEAMS } from "@/lib/constants";
-import {
-  QUESTION_SETS,
-  QUIZ_SET_ORDER,
-  adjacentQuestion,
-  getQuestion,
-  getShowStep,
-  type QuestionSetId,
-} from "@/lib/show";
+import { TEAM_ORDER } from "@/lib/constants";
+import { adjacentQuestion, getQuestion, getQuestionSet, getStep } from "@/lib/game";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
+import type { ChallengeRow } from "@/hooks/useScores";
 import type { ChallengeId, GameState, TeamId } from "@/lib/types";
 
-type Target = { set: QuestionSetId; index: number } | null;
+type Target = { set: string; index: number } | null;
 
 interface QuickBarProps {
   gameState: GameState;
-  byChallenge: { challengeId: ChallengeId; palestrati: number; divanisti: number }[];
+  byChallenge: ChallengeRow[];
 }
 
 /**
@@ -32,26 +27,33 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const content = useGameContent();
+  const { teams, challenges } = content;
 
   // Challenge: follows the running order unless picked by hand; a new step resets it.
-  const step = getShowStep(gameState.show_step);
+  const step = getStep(content, gameState.show_step);
   const [picked, setPicked] = useState<ChallengeId | null>(null);
   useEffect(() => setPicked(null), [gameState.show_step]);
-  const challengeId: ChallengeId = picked ?? step?.challengeId ?? "quiz";
+  const challenge =
+    challenges.find((c) => c.id === (picked ?? step?.challengeId)) ?? challenges[0];
+  const challengeId: ChallengeId = challenge?.id ?? "";
   const row = byChallenge.find((r) => r.challengeId === challengeId);
 
   // Questions: from the one on screen, or the last one shown after it was taken off.
-  const live = getQuestion(gameState.question_set, gameState.question_index);
+  const live = getQuestion(content, gameState.question_set, gameState.question_index);
   const lastShown = useRef<Target>(null);
   if (live) lastShown.current = { set: live.set.id, index: live.index };
-  const anchor: Target = live ? { set: live.set.id, index: live.index } : lastShown.current;
-  // The Finalissima is picked by number from the board, not stepped through.
-  const steps = anchor?.set !== "finalissima";
-  const quizStart: Target =
-    gameState.show_step === "quiz" ? { set: QUIZ_SET_ORDER[gameState.show_substep ?? 0] ?? "arte", index: 0 } : null;
-  const next: Target = anchor ? (steps ? adjacentQuestion(anchor.set, anchor.index, 1) : null) : quizStart;
-  const prev: Target = anchor && steps ? adjacentQuestion(anchor.set, anchor.index, -1) : null;
-  const showQuestions = Boolean(live || quizStart || (anchor && steps));
+  const anchorSet = getQuestionSet(content, live?.set.id ?? lastShown.current?.set);
+  const anchor: Target = live ? { set: live.set.id, index: live.index } : anchorSet ? lastShown.current : null;
+  // Pick-a-number sets are chosen from the board, not stepped through.
+  const steps = !anchorSet?.pickByNumber;
+  // Nothing shown yet: ▶ starts the current step's round (its first set if no round matches).
+  const stepSets = content.questionSets.filter((s) => s.step === gameState.show_step && !s.pickByNumber);
+  const startSet = stepSets.find((s) => s.substep === (gameState.show_substep ?? 0)) ?? stepSets[0];
+  const start: Target = startSet ? { set: startSet.id, index: 0 } : null;
+  const next: Target = anchor ? (steps ? adjacentQuestion(content, anchor.set, anchor.index, 1) : null) : start;
+  const prev: Target = anchor && steps ? adjacentQuestion(content, anchor.set, anchor.index, -1) : null;
+  const showQuestions = Boolean(live || start || (anchor && steps));
 
   function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -61,7 +63,7 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
     });
   }
 
-  const points = (team: TeamId) => (team === "palestrati" ? row?.palestrati : row?.divanisti) ?? 0;
+  const points = (team: TeamId) => row?.[team] ?? 0;
   const adjust = (teamId: TeamId, delta: number) => run(() => adjustScore({ challengeId, teamId, delta }));
   const go = (target: Target) => target && run(() => showQuestion(target));
 
@@ -100,18 +102,18 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
                   </span>
                 </BarButton>
                 <BarButton primary disabled={pending || !next} onClick={() => go(next)} aria-label="Domanda successiva">
-                  {live ? "▶" : next ? `${QUESTION_SETS[next.set].label} ${next.index + 1} ▶` : "▶"}
+                  {live ? "▶" : next ? `${getQuestionSet(content, next.set)?.label ?? ""} ${next.index + 1} ▶` : "▶"}
                 </BarButton>
               </div>
             )}
 
             <div className="flex items-center justify-between gap-1">
-              {CHALLENGE_ORDER.map((id, i) => (
+              {challenges.map(({ id, name, icon }, i) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setPicked(id)}
-                  aria-label={CHALLENGES[id].name}
+                  aria-label={name}
                   aria-pressed={id === challengeId}
                   className={cn(
                     "flex h-9 flex-1 items-center justify-center gap-1 rounded-lg font-numeric text-base transition-colors",
@@ -119,32 +121,32 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
                   )}
                 >
                   {i + 1}
-                  <ChallengeIcon id={id} className="h-4 w-4" />
+                  <ChallengeIcon icon={icon} className="h-4 w-4" />
                 </button>
               ))}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {(["palestrati", "divanisti"] as const).map((team) => (
+              {TEAM_ORDER.map((team) => (
                 <div
                   key={team}
                   className={cn(
                     "flex items-center gap-1.5 rounded-xl border p-1.5",
-                    team === "palestrati" ? "border-gym/40" : "border-couch/40"
+                    team === "a" ? "border-team-a/40" : "border-team-b/40"
                   )}
                 >
                   <button
                     type="button"
                     disabled={pending || points(team) === 0}
                     onClick={() => adjust(team, -1)}
-                    aria-label={`Togli un punto ai ${TEAMS[team].name}`}
+                    aria-label={`Togli un punto ai ${teams[team].name}`}
                     className="h-12 w-10 shrink-0 rounded-lg bg-plum-900/70 text-xl text-ink-dim disabled:opacity-40"
                   >
                     −
                   </button>
                   <div className="min-w-0 flex-1 text-center leading-none">
-                    <p className={cn("truncate font-sans text-[0.6rem] uppercase tracking-[0.04em]", team === "palestrati" ? "text-gym" : "text-couch")}>
-                      {TEAMS[team].name}
+                    <p className={cn("truncate font-sans text-[0.6rem] uppercase tracking-[0.04em]", team === "a" ? "text-team-a" : "text-team-b")}>
+                      {teams[team].name}
                     </p>
                     <p className="font-numeric text-2xl text-cream">{points(team)}</p>
                   </div>
@@ -152,10 +154,10 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
                     type="button"
                     disabled={pending}
                     onClick={() => adjust(team, 1)}
-                    aria-label={`Un punto ai ${TEAMS[team].name}`}
+                    aria-label={`Un punto ai ${teams[team].name}`}
                     className={cn(
                       "h-12 w-12 shrink-0 rounded-lg font-numeric text-2xl text-void disabled:opacity-60",
-                      team === "palestrati" ? "bg-gym" : "bg-couch"
+                      team === "a" ? "bg-team-a" : "bg-team-b"
                     )}
                   >
                     +1
@@ -164,12 +166,12 @@ export function QuickBar({ gameState, byChallenge }: QuickBarProps) {
               ))}
             </div>
             <p className="-mt-1 truncate text-center font-sans text-[0.6rem] uppercase tracking-[0.2em] text-ink-dim">
-              Punti a: {CHALLENGES[challengeId].name}
+              Punti a: {challenge?.name}
             </p>
           </>
         )}
 
-        {error && <p className="text-center font-sans text-xs text-gym">{error}</p>}
+        {error && <p className="text-center font-sans text-xs text-danger">{error}</p>}
       </div>
     </div>
   );

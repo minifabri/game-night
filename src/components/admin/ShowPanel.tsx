@@ -5,17 +5,20 @@ import { clearShow, setShowCard, setShowSubstep, startShowStep } from "@/lib/act
 import { Panel } from "@/components/admin/Panel";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { SHOW_STEPS, activeSubstep, getShowStep } from "@/lib/show";
+import { activeSubstep, getStep, type GameSecrets } from "@/lib/game";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import type { GameState } from "@/lib/types";
 
 /** The evening's running order: start each step and light it up on every screen. */
-export function ShowPanel({ gameState }: { gameState: GameState }) {
+export function ShowPanel({ gameState, secrets }: { gameState: GameState; secrets: GameSecrets | null }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const content = useGameContent();
+  const steps = content.steps;
 
-  const current = getShowStep(gameState.show_step);
-  const currentIndex = current ? SHOW_STEPS.indexOf(current) : -1;
-  const next = SHOW_STEPS[currentIndex + 1] ?? null;
+  const current = getStep(content, gameState.show_step);
+  const currentIndex = current ? steps.indexOf(current) : -1;
+  const next = steps[currentIndex + 1] ?? null;
   const cardOn = gameState.show_card === true;
   const questionOn = gameState.question_set != null && gameState.question_index != null;
   const blocked =
@@ -37,7 +40,7 @@ export function ShowPanel({ gameState }: { gameState: GameState }) {
       </p>
 
       {blocked && (
-        <p className="mb-3 rounded-xl border border-gym/40 bg-gym/5 px-3 py-2 font-sans text-xs text-gym-soft">
+        <p className="mb-3 rounded-xl border border-danger/40 bg-danger/5 px-3 py-2 font-sans text-xs text-danger-soft">
           {gameState.status === "TIMER"
             ? "C'è un timer a schermo: torna al tabellone per cambiare step."
             : gameState.status === "PAUSED"
@@ -65,7 +68,7 @@ export function ShowPanel({ gameState }: { gameState: GameState }) {
       </div>
 
       <ol className="flex flex-col gap-2">
-        {SHOW_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const isCurrent = step.id === current?.id;
           const done = i < currentIndex;
           return (
@@ -88,7 +91,7 @@ export function ShowPanel({ gameState }: { gameState: GameState }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-sans text-[0.65rem] uppercase tracking-[0.2em] text-ink-dim">
-                    {step.time} · {step.duration} · {step.kicker}
+                    {[step.time, step.duration, step.kicker].filter(Boolean).join(" · ")}
                   </p>
                   <p className="truncate font-sans text-sm font-medium text-cream">{step.title}</p>
                 </div>
@@ -108,7 +111,9 @@ export function ShowPanel({ gameState }: { gameState: GameState }) {
                 )}
               </div>
 
-              {isCurrent && <CurrentStepDetails gameState={gameState} pending={pending} run={run} />}
+              {isCurrent && (
+                <CurrentStepDetails gameState={gameState} secrets={secrets} pending={pending} run={run} />
+              )}
             </li>
           );
         })}
@@ -119,30 +124,36 @@ export function ShowPanel({ gameState }: { gameState: GameState }) {
           type="button"
           disabled={pending}
           onClick={() => run(clearShow)}
-          className="mt-3 w-full font-sans text-xs uppercase tracking-[0.2em] text-ink-dim hover:text-gym disabled:opacity-40"
+          className="mt-3 w-full font-sans text-xs uppercase tracking-[0.2em] text-ink-dim hover:text-danger disabled:opacity-40"
         >
           Azzera scaletta
         </button>
       )}
 
-      {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
+      {error && <p className="mt-3 text-center font-sans text-sm text-danger">{error}</p>}
     </Panel>
   );
 }
 
 function CurrentStepDetails({
   gameState,
+  secrets,
   pending,
   run,
 }: {
   gameState: GameState;
+  secrets: GameSecrets | null;
   pending: boolean;
   run: (action: () => Promise<{ ok: boolean; error?: string }>) => void;
 }) {
-  const step = getShowStep(gameState.show_step);
+  const content = useGameContent();
+  const step = getStep(content, gameState.show_step);
   if (!step) return null;
   const active = activeSubstep(step, gameState.show_substep);
   const activeSub = step.substeps?.[active];
+  const lines = secrets?.steps[step.id];
+  const activeScript = lines?.substepScripts?.[active];
+  const hasQuestions = content.questionSets.some((s) => s.step === step.id && !s.pickByNumber);
 
   return (
     <div className="mt-3 flex flex-col gap-3 border-t border-ink-dim/15 pt-3">
@@ -177,21 +188,21 @@ function CurrentStepDetails({
                 : "Quelli dopo restano coperti finché non li tocchi."}
             </p>
           )}
-          {activeSub?.script && <Script label={`Lancio — ${activeSub.title}`} text={activeSub.script} />}
+          {activeSub && activeScript && <Script label={`Lancio — ${activeSub.title}`} text={activeScript} />}
         </div>
       )}
 
-      {step.script && <Script label="Da dire" text={step.script} />}
+      {lines?.script && <Script label="Da dire" text={lines.script} />}
 
-      {step.id === "quiz" && (
+      {hasQuestions && (
         <p className="font-sans text-xs text-ink-dim">Le domande si lanciano dal pannello «Domande a schermo».</p>
       )}
-      {step.id === "finalissima" && (
+      {step.board && (
         <p className="font-sans text-xs text-ink-dim">
-          A schermo c&apos;è il tabellone dei 20 numeri: tocca il numero scelto in «Domande a schermo».
+          A schermo c&apos;è il tabellone dei numeri: tocca il numero scelto in «Domande a schermo».
         </p>
       )}
-      {step.id === "proclamation" && (
+      {step.finale && (
         <p className="font-sans text-xs text-ink-dim">
           Per svelare i vincitori premi «Termina gioco» nel pannello «Stato del gioco».
         </p>

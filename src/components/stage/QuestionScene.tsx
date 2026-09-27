@@ -3,7 +3,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { useTick, msUntil } from "@/hooks/useTick";
-import { getQuestion, getShowStep } from "@/lib/show";
+import { DEFAULT_QUESTION_TIMER_MS, getQuestion, getStep } from "@/lib/game";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import { QuizImage } from "@/components/stage/QuizImage";
 import type { GameState } from "@/lib/types";
 
@@ -18,12 +19,13 @@ interface QuestionSceneProps {
  */
 export function QuestionScene({ gameState, variant = "phone" }: QuestionSceneProps) {
   const isTv = variant === "tv";
-  const current = getQuestion(gameState.question_set, gameState.question_index);
+  const content = useGameContent();
+  const current = getQuestion(content, gameState.question_set, gameState.question_index);
   if (!current) return null;
 
   const { set, question, index } = current;
-  const step = getShowStep(set.step);
-  const isFinalissima = set.id === "finalissima";
+  const step = getStep(content, set.step);
+  const byNumber = set.pickByNumber === true;
   const showAnswer = gameState.question_answer_visible === true;
 
   return (
@@ -41,9 +43,9 @@ export function QuestionScene({ gameState, variant = "phone" }: QuestionScenePro
       <div className={cn("flex w-full items-center justify-between", isTv ? "max-w-6xl" : "max-w-md")}>
         <p className={cn("font-sans uppercase tracking-[0.35em] text-gold-400", isTv ? "text-lg" : "text-[0.6rem]")}>
           {step?.title}
-          {!isFinalissima && <span className="text-gold-200"> · {set.label}</span>}
+          {!byNumber && <span className="text-gold-200"> · {set.label}</span>}
         </p>
-        {isFinalissima ? (
+        {byNumber ? (
           question.category && (
             <span
               className={cn(
@@ -71,7 +73,7 @@ export function QuestionScene({ gameState, variant = "phone" }: QuestionScenePro
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="flex w-full flex-1 flex-col items-center justify-center gap-6 text-center"
         >
-          {isFinalissima && (
+          {byNumber && (
             <p className={cn("font-numeric leading-none text-gold-400", isTv ? "text-8xl" : "text-5xl")}>
               N° {index + 1}
             </p>
@@ -127,11 +129,11 @@ export function QuestionScene({ gameState, variant = "phone" }: QuestionScenePro
                 Risposta
               </p>
               <p className={cn("font-display font-medium text-gold-200", isTv ? "text-6xl" : "text-2xl")}>
-                {question.answer ?? "Ve la dice la presentatrice!"}
+                {gameState.question_answer_text ?? "Ve la dice chi conduce!"}
               </p>
-              {question.title && (
+              {gameState.question_answer_detail && (
                 <p className={cn("font-display italic text-cream/80", isTv ? "text-2xl" : "text-sm")}>
-                  {question.title}
+                  {gameState.question_answer_detail}
                 </p>
               )}
             </motion.div>
@@ -139,7 +141,7 @@ export function QuestionScene({ gameState, variant = "phone" }: QuestionScenePro
             <QuestionTimer
               key={`timer:${gameState.question_nonce ?? 0}`}
               endsAt={gameState.question_timer_ends_at}
-              totalMs={set.timerMs ?? 10_000}
+              totalMs={set.timerMs ?? DEFAULT_QUESTION_TIMER_MS}
               isTv={isTv}
             />
           ) : null}
@@ -168,7 +170,7 @@ function QuestionTimer({ endsAt, totalMs, isTv }: { endsAt: string; totalMs: num
         <motion.p
           initial={{ scale: 1.3, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={cn("font-display font-medium tracking-[0.08em] text-gym", isTv ? "text-7xl" : "text-4xl")}
+          className={cn("font-display font-medium tracking-[0.08em] text-danger", isTv ? "text-7xl" : "text-4xl")}
         >
           Tempo!
         </motion.p>
@@ -176,7 +178,7 @@ function QuestionTimer({ endsAt, totalMs, isTv }: { endsAt: string; totalMs: num
         <p
           className={cn(
             "font-numeric leading-none transition-colors",
-            urgent ? "text-gym" : "text-cream",
+            urgent ? "text-danger" : "text-cream",
             isTv ? "text-8xl" : "text-5xl"
           )}
         >
@@ -185,7 +187,7 @@ function QuestionTimer({ endsAt, totalMs, isTv }: { endsAt: string; totalMs: num
       )}
       <div className={cn("w-full overflow-hidden rounded-full bg-ink-dim/15", isTv ? "h-3" : "h-2")}>
         <div
-          className={cn("h-full rounded-full transition-[width] duration-100 ease-linear", urgent || over ? "bg-gym" : "bg-gold-400")}
+          className={cn("h-full rounded-full transition-[width] duration-100 ease-linear", urgent || over ? "bg-danger" : "bg-gold-400")}
           style={{ width: `${fraction * 100}%` }}
         />
       </div>

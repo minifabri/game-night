@@ -2,18 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/cn";
-import { TEAM_ORDER, TEAMS } from "@/lib/constants";
+import { TEAM_ORDER } from "@/lib/constants";
+import { useGameContent } from "@/components/game/ActiveGameProvider";
 import type { Participant, TeamId } from "@/lib/types";
 import { deleteParticipant } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function ParticipantsPanel({ participants }: { participants: Participant[] }) {
+  const { teams } = useGameContent();
   const [pending, startTransition] = useTransition();
   const [toDelete, setToDelete] = useState<Participant | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const byTeam: Record<TeamId, Participant[]> = { palestrati: [], divanisti: [] };
+  const byTeam: Record<TeamId, Participant[]> = { a: [], b: [] };
   for (const p of participants) byTeam[p.team_id].push(p);
 
   function confirmDelete() {
@@ -30,8 +32,8 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
     <Panel title="Partecipanti">
       <div className="mb-5 grid grid-cols-3 gap-3 text-center">
         <Stat label="Totale" value={participants.length} />
-        <Stat label="Palestrati" value={byTeam.palestrati.length} color="text-gym" />
-        <Stat label="Divanisti" value={byTeam.divanisti.length} color="text-couch" />
+        <Stat label={teams.a.name} value={byTeam.a.length} color="text-team-a" />
+        <Stat label={teams.b.name} value={byTeam.b.length} color="text-team-b" />
       </div>
 
       {participants.length === 0 ? (
@@ -43,10 +45,10 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
               <p
                 className={cn(
                   "mb-2 font-sans text-xs font-medium uppercase tracking-[0.2em]",
-                  teamId === "palestrati" ? "text-gym" : "text-couch"
+                  teamId === "a" ? "text-team-a" : "text-team-b"
                 )}
               >
-                {TEAMS[teamId].name}
+                {teams[teamId].name}
               </p>
               <ul className="flex flex-col gap-1.5">
                 {byTeam[teamId].map((p) => (
@@ -73,7 +75,7 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
                       disabled={pending}
                       aria-label={`Elimina ${p.name}`}
                       title="Elimina partecipante"
-                      className="ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-base leading-none text-ink-dim transition-colors hover:bg-gym/15 hover:text-gym disabled:opacity-40"
+                      className="ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-base leading-none text-ink-dim transition-colors hover:bg-danger/15 hover:text-danger disabled:opacity-40"
                     >
                       ×
                     </button>
@@ -84,7 +86,7 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
           ))}
         </div>
       )}
-      {error && <p className="mt-3 font-sans text-sm text-gym">{error}</p>}
+      {error && <p className="mt-3 font-sans text-sm text-danger">{error}</p>}
       <ConfirmDialog
         open={toDelete !== null}
         title={`Eliminare ${toDelete?.name ?? ""}?`}

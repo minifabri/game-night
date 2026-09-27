@@ -128,7 +128,7 @@ export function DisplayControls() {
         }
         className={cn(
           "flex items-center gap-1.5 rounded-full border bg-void/90 px-3 py-2 backdrop-blur",
-          wake === "on" ? "border-plum-600 text-ink-dim" : "border-gym/60 text-gym-soft"
+          wake === "on" ? "border-plum-600 text-ink-dim" : "border-danger/60 text-danger-soft"
         )}
       >
         <EyeIcon />

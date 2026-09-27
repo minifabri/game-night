@@ -104,7 +104,7 @@ export function GameLifecyclePanel({ gameState }: { gameState: GameState }) {
         </Button>
       </div>
 
-      {error && <p className="mt-3 text-center font-sans text-sm text-gym">{error}</p>}
+      {error && <p className="mt-3 text-center font-sans text-sm text-danger">{error}</p>}
 
       <ConfirmDialog
         open={confirmOpen}
