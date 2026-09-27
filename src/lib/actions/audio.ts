@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { AUTO_EVENTS, parseBuiltin } from "@/lib/audio/catalog";
+import { parseSpotify, spotifyUrl } from "@/lib/audio/spotify";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -67,7 +68,8 @@ export async function createSoundUpload(
 
 const addSoundSchema = z
   .object({
-    name: z.string().trim().min(1, "Dai un nome al suono.").max(60),
+    // may be empty for a Spotify link: the title is fetched from Spotify
+    name: z.string().trim().max(60),
     kind: z.enum(["music", "sfx"]),
     storagePath: z.string().regex(/^[0-9a-f-]{36}\.[a-z0-9]{1,5}$/).optional(),
     url: z.string().url("URL non valido.").max(1000).optional(),
@@ -88,20 +90,45 @@ export async function addSound(input: {
 
   const supabase = getSupabaseAdminClient();
   let url = parsed.data.url ?? "";
+  let name = parsed.data.name;
+  let kind = parsed.data.kind;
+  const spotify = parsed.data.url ? parseSpotify(url) : null;
   if (parsed.data.storagePath) {
     url = supabase.storage.from(BUCKET).getPublicUrl(parsed.data.storagePath).data.publicUrl;
+  } else if (spotify) {
+    // Spotify only plays through its embed player, so it can only be a soundtrack
+    url = spotifyUrl(spotify);
+    kind = "music";
+    if (!name) name = (await fetchSpotifyTitle(url)) ?? "";
+  } else if (/spotify\.(com|link)/i.test(url)) {
+    return { ok: false, error: "Link Spotify non riconosciuto: usa Condividi → Copia link." };
   } else if (!/^https:\/\//.test(url)) {
     return { ok: false, error: "Usa un link https." };
   }
+  if (!name) return { ok: false, error: "Dai un nome al suono." };
 
   const { error } = await supabase.from("sounds").insert({
-    name: parsed.data.name,
-    kind: parsed.data.kind,
+    name,
+    kind,
     url,
     storage_path: parsed.data.storagePath ?? null,
   });
   if (error) return { ok: false, error: "Impossibile salvare il suono." };
   return { ok: true };
+}
+
+/** Playlist/album/track title from Spotify's public oEmbed endpoint. */
+async function fetchSpotifyTitle(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { title?: unknown };
+    return typeof data.title === "string" ? data.title.trim().slice(0, 60) || null : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteSound(id: string): Promise<ActionResult> {

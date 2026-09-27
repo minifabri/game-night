@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GameStage } from "@/components/stage/GameStage";
 import { ActiveGameProvider } from "@/components/game/ActiveGameProvider";
+import { DisplayControls } from "@/components/stage/DisplayControls";
 
 export const metadata: Metadata = {
   title: "Scoreboard — Game Night",
@@ -12,6 +13,7 @@ export default function DisplayPage() {
       <ActiveGameProvider>
         <GameStage variant="tv" isCanonical withAudio />
       </ActiveGameProvider>
+      <DisplayControls />
     </main>
   );
 }

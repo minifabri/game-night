@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addSound, createSoundUpload, deleteSound, setAutoEffect } from "@/lib/actions/audio";
 import { AUTO_EVENTS, CIAO_DARWIN_PACK, searchUrl, youtubeSearchUrl } from "@/lib/audio/catalog";
 import { getAudioEngine } from "@/lib/audio/engine";
+import { isSpotifyUrl } from "@/lib/audio/spotify";
 import { Button } from "@/components/ui/Button";
 import type { Sound, SoundKind, SoundRef } from "@/lib/types";
 
@@ -19,7 +20,7 @@ interface SoundLibraryProps {
 export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"file" | "url">("file");
+  const [mode, setMode] = useState<"file" | "url" | "spotify">("file");
   const [name, setName] = useState("");
   const [kind, setKind] = useState<SoundKind>("sfx");
   const [url, setUrl] = useState("");
@@ -39,8 +40,8 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      if (mode === "url") {
-        const result = await addSound({ name, kind, url: url.trim() });
+      if (mode !== "file") {
+        const result = await addSound({ name, kind: mode === "spotify" ? "music" : kind, url: url.trim() });
         if (!result.ok) return setError(result.error);
         resetForm();
         return;
@@ -92,7 +93,7 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
 
       <form ref={formRef} onSubmit={submit} className="mb-4 flex flex-col gap-2 rounded-xl border border-ink-dim/15 p-3">
         <div className="flex gap-2 font-sans text-xs">
-          {(["file", "url"] as const).map((m) => (
+          {(["file", "url", "spotify"] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -102,24 +103,33 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
                 mode === m ? "border-gold-400 text-gold-300" : "border-ink-dim/25 text-ink-dim"
               )}
             >
-              {m === "file" ? "Carica file" : "Link mp3"}
+              {m === "file" ? "Carica file" : m === "url" ? "Link mp3" : "Spotify"}
             </button>
           ))}
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as SoundKind)}
-            className="ml-auto rounded-full border border-ink-dim/25 bg-plum-900 px-3 py-1 text-cream"
-          >
-            <option value="sfx">Effetto</option>
-            <option value="music">Colonna sonora</option>
-          </select>
+          {mode !== "spotify" && (
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as SoundKind)}
+              className="ml-auto rounded-full border border-ink-dim/25 bg-plum-900 px-3 py-1 text-cream"
+            >
+              <option value="sfx">Effetto</option>
+              <option value="music">Colonna sonora</option>
+            </select>
+          )}
         </div>
+        {mode === "spotify" && (
+          <p className="font-sans text-xs text-ink-dim">
+            Incolla il link di una playlist, album o brano (Condividi → Copia link): diventa una colonna sonora. Il
+            nome si può lasciare vuoto, lo prende da Spotify. Sulla TV accedi a Spotify nel browser (dal player in
+            basso a destra o su open.spotify.com), altrimenti Spotify fa sentire solo anteprime di 30 secondi.
+          </p>
+        )}
         <input
           type="text"
           value={name}
           maxLength={60}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nome (es. Risata Laurenti)"
+          placeholder={mode === "spotify" ? "Nome (facoltativo)" : "Nome (es. Risata Laurenti)"}
           className="rounded-lg border border-ink-dim/25 bg-transparent px-3 py-2 font-sans text-sm text-cream outline-none placeholder:text-ink-dim/60 focus:border-gold-400"
         />
         {mode === "file" ? (
@@ -139,11 +149,11 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://…/suono.mp3"
+            placeholder={mode === "spotify" ? "https://open.spotify.com/playlist/…" : "https://…/suono.mp3"}
             className="rounded-lg border border-ink-dim/25 bg-transparent px-3 py-2 font-sans text-sm text-cream outline-none placeholder:text-ink-dim/60 focus:border-gold-400"
           />
         )}
-        <Button type="submit" size="md" disabled={pending || !name.trim()}>
+        <Button type="submit" size="md" disabled={pending || (mode === "spotify" ? !url.trim() : !name.trim())}>
           {pending ? "Salvataggio…" : "Aggiungi alla libreria"}
         </Button>
       </form>
@@ -152,20 +162,32 @@ export function SoundLibrary({ sounds, autoMap }: SoundLibraryProps) {
         <ul className="mb-5 flex flex-col gap-1.5">
           {sounds.map((s) => (
             <li key={s.id} className="flex items-center gap-2 rounded-lg border border-ink-dim/15 px-3 py-1.5">
-              <button
-                type="button"
-                aria-label={`Anteprima ${s.name}`}
-                onClick={() => {
-                  const engine = getAudioEngine();
-                  engine.unlock().then(() => engine.playEffect({ ref: s.id, url: s.url }));
-                }}
-                className="text-gold-300 hover:text-gold-200"
-              >
-                <HeadphonesIcon />
-              </button>
+              {isSpotifyUrl(s.url) ? (
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Apri ${s.name} su Spotify`}
+                  className="text-gold-300 hover:text-gold-200"
+                >
+                  <HeadphonesIcon />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Anteprima ${s.name}`}
+                  onClick={() => {
+                    const engine = getAudioEngine();
+                    engine.unlock().then(() => engine.playEffect({ ref: s.id, url: s.url }));
+                  }}
+                  className="text-gold-300 hover:text-gold-200"
+                >
+                  <HeadphonesIcon />
+                </button>
+              )}
               <span className="min-w-0 flex-1 truncate font-sans text-sm text-ink">{s.name}</span>
               <span className="font-sans text-[0.6rem] uppercase tracking-[0.2em] text-ink-dim">
-                {s.kind === "music" ? "musica" : "effetto"}
+                {isSpotifyUrl(s.url) ? "spotify" : s.kind === "music" ? "musica" : "effetto"}
               </span>
               {confirmDelete === s.id ? (
                 <button

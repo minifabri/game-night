@@ -18,6 +18,7 @@ import { GamesPanel } from "@/components/admin/GamesPanel";
 import { useGameSecrets } from "@/hooks/useGameSecrets";
 import { ShowPanel } from "@/components/admin/ShowPanel";
 import { QuestionsPanel } from "@/components/admin/QuestionsPanel";
+import { QuickBar } from "@/components/admin/QuickBar";
 import { AnnouncementPanel } from "@/components/admin/AnnouncementPanel";
 import { SoundConsole } from "@/components/admin/SoundConsole";
 import { ResetScoresPanel } from "@/components/admin/ResetScoresPanel";
@@ -42,7 +43,8 @@ export function AdminDashboard() {
   if (gLoading || pLoading || sLoading || !gameState || !game) return <StatusScreen kind="loading" />;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    // pb leaves room for the sticky QuickBar at the bottom
+    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pb-72 pt-8 sm:px-6">
       <header className="flex items-center justify-between">
         <Wordmark size="sm" className="items-start text-left" />
         <button
@@ -76,6 +78,7 @@ export function AdminDashboard() {
       <ResetScoresPanel />
       <GamesPanel activeGameId={game.id} />
       {DEV_MODE && <DevResetPanel />}
+      <QuickBar gameState={gameState} byChallenge={byChallenge} />
     </div>
   );
 }

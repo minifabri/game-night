@@ -1,15 +1,32 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { cn } from "@/lib/cn";
 import { TEAM_ORDER } from "@/lib/constants";
 import { useGameContent } from "@/components/game/ActiveGameProvider";
 import type { Participant, TeamId } from "@/lib/types";
+import { deleteParticipant } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function ParticipantsPanel({ participants }: { participants: Participant[] }) {
   const { teams } = useGameContent();
+  const [pending, startTransition] = useTransition();
+  const [toDelete, setToDelete] = useState<Participant | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const byTeam: Record<TeamId, Participant[]> = { a: [], b: [] };
   for (const p of participants) byTeam[p.team_id].push(p);
+
+  function confirmDelete() {
+    if (!toDelete) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteParticipant({ participantId: toDelete.id });
+      setToDelete(null);
+      if (!result.ok) setError(result.error);
+    });
+  }
 
   return (
     <Panel title="Partecipanti">
@@ -52,6 +69,16 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
                         </span>
                       )}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setToDelete(p)}
+                      disabled={pending}
+                      aria-label={`Elimina ${p.name}`}
+                      title="Elimina partecipante"
+                      className="ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-base leading-none text-ink-dim transition-colors hover:bg-danger/15 hover:text-danger disabled:opacity-40"
+                    >
+                      ×
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -59,6 +86,16 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
           ))}
         </div>
       )}
+      {error && <p className="mt-3 font-sans text-sm text-danger">{error}</p>}
+      <ConfirmDialog
+        open={toDelete !== null}
+        title={`Eliminare ${toDelete?.name ?? ""}?`}
+        description="Il partecipante verrà rimosso dalla lista e dalle estrazioni. L'operazione non si può annullare."
+        confirmLabel="Elimina"
+        pending={pending}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </Panel>
   );
 }

@@ -4,11 +4,17 @@ import { parseBuiltin } from "@/lib/audio/catalog";
 import { playBuiltin } from "@/lib/audio/synth";
 
 const DUCK_FACTOR = 0.3;
+/** Effects at least this long pause music that can't be ducked (Spotify). */
+const LONG_EFFECT_MS = 2000;
+/** Keeps the music paused across back-to-back long effects instead of flickering. */
+const HOLD_RELEASE_MS = 300;
 
 /**
  * Browser-side audio output shared by the whole page: one looping music
  * element plus fire-and-forget effects (synthesized or from a URL). Music is
- * ducked while an effect plays so announcements stay audible.
+ * ducked while an effect plays so announcements stay audible. Long effects
+ * also raise a "hold" that players without a volume control (Spotify) obey by
+ * pausing.
  */
 class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -20,6 +26,7 @@ class AudioEngine {
   private muted = false;
   private ducks = 0;
   private activeClips = new Set<HTMLAudioElement>();
+  private holds = new Set<symbol>();
   private listeners = new Set<() => void>();
 
   private ensureContext(): AudioContext | null {
@@ -51,6 +58,25 @@ class AudioEngine {
       this.music.play().catch(() => {});
     }
     this.emit();
+  }
+
+  /** True while a long effect plays: music that can't be ducked should pause. */
+  isHoldingMusic(): boolean {
+    return this.holds.size > 0;
+  }
+
+  private hold(): () => void {
+    const token = Symbol();
+    this.holds.add(token);
+    if (this.holds.size === 1) this.emit();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      setTimeout(() => {
+        if (this.holds.delete(token) && this.holds.size === 0) this.emit();
+      }, HOLD_RELEASE_MS);
+    };
   }
 
   isUnlocked(): boolean {
@@ -98,14 +124,18 @@ class AudioEngine {
     }, ms);
   }
 
-  /** Plays a `builtin:<id>` effect, or an audio file when `url` is given. */
-  playEffect(target: { ref: string; url?: string | null }, opts: { durationMs?: number } = {}) {
+  /**
+   * Plays a `builtin:<id>` effect, or an audio file when `url` is given.
+   * `holdMusic` pauses un-duckable music for this effect whatever its length.
+   */
+  playEffect(target: { ref: string; url?: string | null }, opts: { durationMs?: number; holdMusic?: boolean } = {}) {
     const builtin = parseBuiltin(target.ref);
     if (builtin) {
       const ctx = this.ensureContext();
       if (!ctx || !this.sfxBus || ctx.state !== "running") return;
       const ms = playBuiltin(ctx, this.sfxBus, builtin, opts);
       this.duckFor(ms);
+      if (opts.holdMusic || ms >= LONG_EFFECT_MS) setTimeout(this.hold(), ms);
       return;
     }
     if (!target.url) return;
@@ -114,7 +144,13 @@ class AudioEngine {
     this.activeClips.add(clip);
     this.ducks++;
     this.applyVolumes();
+    let release: (() => void) | null = opts.holdMusic ? this.hold() : null;
+    clip.addEventListener("loadedmetadata", () => {
+      // Infinity (a stream) counts as long; NaN (unknown) doesn't
+      if (!release && this.activeClips.has(clip) && clip.duration * 1000 >= LONG_EFFECT_MS) release = this.hold();
+    });
     const done = () => {
+      release?.();
       if (!this.activeClips.delete(clip)) return;
       this.ducks = Math.max(0, this.ducks - 1);
       this.applyVolumes();
@@ -137,6 +173,10 @@ class AudioEngine {
     }
     this.ducks = 0;
     this.applyVolumes();
+    if (this.holds.size > 0) {
+      this.holds.clear();
+      this.emit();
+    }
   }
 
   /** Syncs the music player to the desired state; `restart` rewinds to the start. */

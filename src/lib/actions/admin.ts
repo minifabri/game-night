@@ -65,6 +65,33 @@ export async function startGame(): Promise<ActionResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Participants
+// ---------------------------------------------------------------------------
+
+const deleteParticipantSchema = z.object({ participantId: z.string().uuid() });
+
+/**
+ * Removes a single registered participant. If they are the current draw pick,
+ * the FK (`on delete set null`) clears it and the screens fall back to "—".
+ */
+export async function deleteParticipant(input: { participantId: string }): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = deleteParticipantSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Partecipante non valido." };
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase
+    .from("participants")
+    .delete()
+    .eq("id", parsed.data.participantId);
+
+  if (error) return { ok: false, error: "Eliminazione non riuscita." };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // Pause
 // ---------------------------------------------------------------------------
 
@@ -192,6 +219,58 @@ export async function setScore(input: {
       challenge_id: parsed.data.challengeId,
       team_id: parsed.data.teamId,
       points: parsed.data.points,
+    },
+    { onConflict: "game_id,challenge_id,team_id" }
+  );
+
+  if (error) return { ok: false, error: "Impossibile salvare il punteggio." };
+  return { ok: true };
+}
+
+const adjustScoreSchema = z.object({
+  challengeId: setScoreSchema.shape.challengeId,
+  teamId: setScoreSchema.shape.teamId,
+  delta: z.number().int().min(-10).max(10),
+});
+
+/**
+ * +/- on the current points, read server-side: quick repeated taps from the
+ * admin's sticky bar each build on the latest value instead of a stale one
+ * (Next runs a client's server actions one after the other).
+ */
+export async function adjustScore(input: {
+  challengeId: ChallengeId;
+  teamId: TeamId;
+  delta: number;
+}): Promise<ActionResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+
+  const parsed = adjustScoreSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Punteggio non valido." };
+
+  const game = await loadActiveGame();
+  if (!game.ok) return game;
+  if (!game.content.challenges.some((c) => c.id === parsed.data.challengeId)) {
+    return { ok: false, error: "Prova non valida." };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data: row } = await supabase
+    .from("scores")
+    .select("points")
+    .eq("game_id", game.gameId)
+    .eq("challenge_id", parsed.data.challengeId)
+    .eq("team_id", parsed.data.teamId)
+    .maybeSingle();
+
+  const points = Math.max(0, Math.min(999, ((row?.points as number) ?? 0) + parsed.data.delta));
+  const { error } = await supabase.from("scores").upsert(
+    {
+      game_id: game.gameId,
+      challenge_id: parsed.data.challengeId,
+      team_id: parsed.data.teamId,
+      points,
     },
     { onConflict: "game_id,challenge_id,team_id" }
   );
@@ -614,8 +693,9 @@ export async function settleFinalReveal(): Promise<ActionResult> {
 }
 
 /**
- * Zeroes every score of the active game and rewinds the game phase so a new
- * simulation can start, without touching its participants.
+ * Zeroes every score of the active game and puts it back to REGISTRATION,
+ * as if it had never started (timer/draw/final/running-order fields
+ * cleared), without touching its participants.
  */
 export async function resetScoresKeepParticipants(): Promise<ActionResult> {
   const guard = await requireAdmin();
@@ -633,7 +713,7 @@ export async function resetScoresKeepParticipants(): Promise<ActionResult> {
 
   const { error } = await supabase
     .from("game_state")
-    .update({ ...LIVE_STATE_RESET, status: "GAME" })
+    .update({ ...LIVE_STATE_RESET, status: "REGISTRATION" })
     .eq("id", 1);
 
   if (error) return { ok: false, error: "Reset punteggi non riuscito." };

@@ -9,5 +9,5 @@ import type { GameState, TeamTotals } from "@/lib/types";
 export function StageAudio({ gameState, totals }: { gameState: GameState; totals: TeamTotals }) {
   const { audioState } = useAudioState();
   const { sounds } = useSounds();
-  return <AudioDirector gameState={gameState} totals={totals} audioState={audioState} sounds={sounds} showUnlock />;
+  return <AudioDirector gameState={gameState} totals={totals} audioState={audioState} sounds={sounds} showUnlock floatingPlayer />;
 }
