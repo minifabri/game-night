@@ -20,6 +20,8 @@ export function HeroImage({ className, priority }: HeroImageProps) {
         alt={`${content.teams.a.name} vs ${content.teams.b.name}`}
         fill
         priority={priority}
+        // uploaded posters live on Supabase Storage, outside next/image's allowed hosts
+        unoptimized={content.heroImage.startsWith("http")}
         className="object-cover object-top"
         sizes="(min-width: 768px) 640px, 100vw"
       />

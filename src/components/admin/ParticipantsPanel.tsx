@@ -9,7 +9,14 @@ import { deleteParticipant } from "@/lib/actions/admin";
 import { Panel } from "@/components/admin/Panel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-export function ParticipantsPanel({ participants }: { participants: Participant[] }) {
+export function ParticipantsPanel({
+  participants,
+  readOnly = false,
+}: {
+  participants: Participant[];
+  /** Archived game: list only, no deleting. */
+  readOnly?: boolean;
+}) {
   const { teams } = useGameContent();
   const [pending, startTransition] = useTransition();
   const [toDelete, setToDelete] = useState<Participant | null>(null);
@@ -69,6 +76,7 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
                         </span>
                       )}
                     </span>
+                    {!readOnly && (
                     <button
                       type="button"
                       onClick={() => setToDelete(p)}
@@ -79,6 +87,7 @@ export function ParticipantsPanel({ participants }: { participants: Participant[
                     >
                       ×
                     </button>
+                    )}
                   </li>
                 ))}
               </ul>

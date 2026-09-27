@@ -67,3 +67,18 @@ export function useGameContent(): GameContent {
   if (!content) throw new Error("Game content not loaded yet.");
   return content;
 }
+
+/**
+ * Renders its children as if `game` were the active one (content, team
+ * names…) without touching the screens: used to look at an archived game.
+ */
+export function GameOverride({ game, children }: { game: Game; children: React.ReactNode }) {
+  const parent = useContext(ActiveGameContext);
+  const value: ActiveGameValue = {
+    gameState: parent?.gameState ?? null,
+    game,
+    loading: false,
+    error: null,
+  };
+  return <ActiveGameContext.Provider value={value}>{children}</ActiveGameContext.Provider>;
+}

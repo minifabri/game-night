@@ -9,6 +9,11 @@ import type { GameContent, GameSecrets } from "./game";
  * scripts can load this file directly.
  */
 
+/** An image: a file in /public ("/games/…") or an uploaded one (https URL). */
+const imageUrl = z
+  .string()
+  .refine((v) => v.startsWith("/") || v.startsWith("https://"), "Immagine non valida.");
+
 const icon = z.enum(["quiz", "creativity", "physical", "courage", "finalissima", "star"]);
 
 const team = z.object({
@@ -48,7 +53,7 @@ const step = z.object({
 const question = z
   .object({
     prompt: z.string().optional(),
-    image: z.string().startsWith("/").optional(),
+    image: imageUrl.optional(),
     category: z.string().optional(),
     /** null = only the presenter knows (admin sees a reminder). */
     answer: z.string().nullable(),
@@ -64,7 +69,8 @@ const questionSet = z.object({
   ask: z.string().nullable(),
   timerMs: z.number().int().min(1000).nullable(),
   pickByNumber: z.boolean().optional(),
-  questions: z.array(question).min(1),
+  /** Empty rounds are allowed while a game is being written. */
+  questions: z.array(question),
 });
 
 export const gamePackSchema = z
@@ -72,7 +78,7 @@ export const gamePackSchema = z
     id: z.string().regex(/^[a-z0-9-]+$/, "id: solo lettere minuscole, numeri e trattini"),
     title: z.string().min(1).max(80),
     subtitle: z.string(),
-    heroImage: z.string().startsWith("/").optional(),
+    heroImage: imageUrl.optional(),
     teams: z.object({ a: team, b: team }),
     challenges: z
       .array(z.object({ id: z.string().regex(/^[a-z0-9-]+$/), name: z.string().min(1), icon: icon.optional() }))
@@ -167,4 +173,95 @@ export function splitPack(input: GamePack): {
     content: JSON.parse(JSON.stringify(content)),
     secrets: JSON.parse(JSON.stringify(secrets)),
   };
+}
+
+/**
+ * The inverse of splitPack: rebuilds the editable pack from what is stored,
+ * for the admin content editor.
+ */
+export function joinPack(id: string, title: string, content: GameContent, secrets: GameSecrets): GamePack {
+  return {
+    id,
+    title,
+    subtitle: content.subtitle,
+    heroImage: content.heroImage,
+    teams: content.teams,
+    challenges: content.challenges,
+    registration: content.registration,
+    steps: content.steps.map((step) => {
+      const lines = secrets.steps[step.id];
+      return {
+        ...step,
+        script: lines?.script,
+        substeps: step.substeps?.map((sub, i) => ({ ...sub, script: lines?.substepScripts?.[i] ?? undefined })),
+      };
+    }),
+    questionSets: content.questionSets.map((set) => ({
+      ...set,
+      questions: set.questions.map((q, i) => {
+        const secret = secrets.answers[set.id]?.[i];
+        return { ...q, answer: secret?.answer ?? null, detail: secret?.detail };
+      }),
+    })),
+  };
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  title: "titolo",
+  subtitle: "sottotitolo",
+  name: "nome",
+  member: "nome singolare",
+  short: "nome nella barra",
+  kicker: "testo sopra il titolo",
+  tagline: "sottotitolo",
+  description: "regola",
+  prompt: "testo",
+  image: "immagine",
+  answer: "risposta",
+  heroImage: "poster",
+  label: "nome del round",
+};
+
+/**
+ * Human-readable list of what's wrong with a pack (content editor and CLI):
+ * "Step «Quiz» › sotto-step 2 › titolo: è vuoto" rather than zod's paths.
+ */
+export function describePackErrors(error: z.ZodError, pack?: unknown): string[] {
+  const p = (pack ?? {}) as {
+    steps?: { title?: string; substeps?: unknown[] }[];
+    questionSets?: { label?: string }[];
+  };
+  return error.issues.map((issue) => {
+    const parts: string[] = [];
+    const path = issue.path;
+    for (let i = 0; i < path.length; i++) {
+      const key = path[i];
+      const next = path[i + 1];
+      if (key === "steps" && typeof next === "number") {
+        parts.push(`Step «${p.steps?.[next]?.title || next + 1}»`);
+        i++;
+      } else if (key === "substeps" && typeof next === "number") {
+        parts.push(`sotto-step ${next + 1}`);
+        i++;
+      } else if (key === "questionSets" && typeof next === "number") {
+        parts.push(`Round «${p.questionSets?.[next]?.label || next + 1}»`);
+        i++;
+      } else if (key === "questions" && typeof next === "number") {
+        parts.push(`domanda ${next + 1}`);
+        i++;
+      } else if (key === "teams" && typeof next === "string") {
+        parts.push(`Squadra ${next.toUpperCase()}`);
+        i++;
+      } else if (typeof key === "string") {
+        parts.push(FIELD_LABELS[key] ?? key);
+      }
+    }
+    const message =
+      issue.code === "too_small" && issue.type === "string"
+        ? "è vuoto"
+        : issue.code === "too_big" && issue.type === "string"
+          ? `troppo lungo (max ${issue.maximum} caratteri)`
+          : issue.message;
+    return parts.length ? `${parts.join(" › ")}: ${message}` : message;
+  });
 }

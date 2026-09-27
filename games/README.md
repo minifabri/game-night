@@ -1,5 +1,7 @@
 # Giochi
 
+Il modo più semplice per creare e modificare un gioco è da **/admin**: «Nuovo gioco» (da zero o copiando un gioco esistente) e poi «Contenuti». Questa cartella serve per scrivere o versionare un gioco come file.
+
 Ogni file qui è un gioco completo: squadre (nomi e colori), prove del tabellone, scaletta, domande, testi da dire e risposte. È la fonte da cui si carica il gioco nel database; una volta caricato, l'app legge tutto da lì.
 
 - `palestrati-vs-divanisti.ts` — la prima serata (già inserita dalla migration `0008`).
