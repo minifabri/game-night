@@ -26,12 +26,15 @@ export function StepEditor({
   step,
   index,
   setPack,
+  onPreview,
 }: {
   gameId: string;
   pack: Pack;
   step: PackStep;
   index: number;
   setPack: (next: Pack) => void;
+  /** Opens the display preview on this step's card. */
+  onPreview: () => void;
 }) {
   const board = boardOf(pack, step);
   const challenge = pack.challenges.find((c) => c.id === step.challengeId);
@@ -57,6 +60,13 @@ export function StepEditor({
       </summary>
 
       <div className="flex flex-col gap-4 border-t border-plum-700/60 p-4">
+        <button
+          type="button"
+          onClick={onPreview}
+          className="self-end rounded-full border border-ink-dim/30 px-3 py-1.5 font-sans text-xs text-cream hover:border-gold-400/70"
+        >
+          Vedi in anteprima
+        </button>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField label="Titolo" value={step.title} onChange={(v) => updateStep((s) => void (s.title = v))} />
           <TextField

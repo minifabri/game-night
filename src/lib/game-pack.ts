@@ -136,7 +136,19 @@ export function splitPack(input: GamePack): {
   content: GameContent;
   secrets: GameSecrets;
 } {
-  const pack = gamePackSchema.parse(input);
+  return splitPackUnchecked(gamePackSchema.parse(input));
+}
+
+/**
+ * splitPack without validation, for the editor's live preview: a game being
+ * written (empty fields, a question without text yet) must still render.
+ */
+export function splitPackUnchecked(pack: GamePack): {
+  id: string;
+  title: string;
+  content: GameContent;
+  secrets: GameSecrets;
+} {
   const secrets: GameSecrets = { steps: {}, answers: {} };
 
   const steps = pack.steps.map(({ script, substeps, ...rest }) => {
